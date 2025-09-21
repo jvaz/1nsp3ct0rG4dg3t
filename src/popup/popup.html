@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1nsp3ct0rG4dg3t</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <img src="../../assets/icons/icon32.png" alt="1nsp3ct0rG4dg3t" class="logo-icon">
+        <h1 class="logo-text">1nsp3ct0rG4dg3t</h1>
+      </div>
+      <div class="header-controls">
+        <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Theme">
+          <span class="theme-icon">🌙</span>
+        </button>
+        <button class="settings-btn" id="settingsBtn" title="Settings">
+          <span class="settings-icon">⚙️</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="storage">Storage</button>
+      <button class="tab-btn" data-tab="cookies">Cookies</button>
+      <button class="tab-btn" data-tab="app-info">App Info</button>
+      <button class="tab-btn" data-tab="console">Console</button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Dashboard Tab -->
+      <div class="tab-content active" id="dashboard">
+        <div class="dashboard-container">
+          <div class="dashboard-header">
+            <h2>Custom Dashboard</h2>
+            <div class="dashboard-controls">
+              <select id="organizationMode" class="organization-select" title="Organization Mode">
+                <option value="default">Default Order</option>
+                <option value="type">Group by Type</option>
+                <option value="domain">Group by Domain</option>
+                <option value="alphabetical">Alphabetical</option>
+                <option value="custom">Custom Order</option>
+              </select>
+              <button class="btn btn-secondary" id="refreshDashboard" title="Refresh Values">↻</button>
+            </div>
+          </div>
+          <div class="pinned-properties" id="pinnedProperties">
+            <div class="empty-state">
+              <p>No properties pinned yet</p>
+              <p class="empty-state-subtitle">Pin localStorage, sessionStorage, or cookie values to see them here</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Storage Tab -->
+      <div class="tab-content" id="storage">
+        <div class="storage-container">
+          <div class="storage-header">
+            <div class="storage-tabs">
+              <button class="storage-tab-btn active" data-storage="localStorage">Local Storage</button>
+              <button class="storage-tab-btn" data-storage="sessionStorage">Session Storage</button>
+            </div>
+            <div class="storage-controls">
+              <button class="btn btn-primary" id="addStorageItem">Add Item</button>
+              <button class="btn btn-secondary" id="refreshStorage">Refresh</button>
+            </div>
+          </div>
+          <div class="storage-content">
+            <div class="search-box">
+              <input type="text" id="storageSearch" placeholder="Search keys or values...">
+            </div>
+            <div class="storage-items" id="storageItems">
+              <div class="loading">Loading storage data...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cookies Tab -->
+      <div class="tab-content" id="cookies">
+        <div class="cookies-container">
+          <div class="cookies-header">
+            <h2>Cookies</h2>
+            <div class="cookies-controls">
+              <button class="btn btn-primary" id="addCookie">Add Cookie</button>
+              <button class="btn btn-secondary" id="refreshCookies">Refresh</button>
+            </div>
+          </div>
+          <div class="cookies-content">
+            <div class="search-box">
+              <input type="text" id="cookieSearch" placeholder="Search cookies...">
+            </div>
+            <div class="cookies-list" id="cookiesList">
+              <div class="loading">Loading cookies...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- App Info Tab -->
+      <div class="tab-content" id="app-info">
+        <div class="app-info-container">
+          <h2>Application Information</h2>
+          <div class="info-sections">
+            <div class="info-section">
+              <h3>Page Details</h3>
+              <div class="info-grid" id="pageInfo">
+                <div class="loading">Loading page information...</div>
+              </div>
+            </div>
+            <div class="info-section">
+              <h3>Performance</h3>
+              <div class="info-grid" id="performanceInfo">
+                <div class="loading">Loading performance data...</div>
+              </div>
+            </div>
+            <div class="info-section">
+              <h3>Security</h3>
+              <div class="info-grid" id="securityInfo">
+                <div class="loading">Loading security information...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Console Tab -->
+      <div class="tab-content" id="console">
+        <div class="console-container">
+          <div class="console-header">
+            <h2>JavaScript Console</h2>
+            <div class="console-controls">
+              <div class="template-selector">
+                <select id="templateCategory" class="template-select" title="Choose Template Category">
+                  <option value="">Choose Template...</option>
+                  <option value="saved">📚 My Saved Scripts</option>
+                  <option value="injection">🔧 Code Injection</option>
+                  <option value="scraping">📊 Data Scraping</option>
+                  <option value="debugging">🐛 Debugging Tools</option>
+                </select>
+                <select id="templateScript" class="template-select" disabled title="Select Specific Template">
+                  <option value="">Select Script...</option>
+                </select>
+                <button class="btn btn-small" id="loadTemplate" disabled title="Load Selected Template">Load</button>
+              </div>
+              <div class="element-tools">
+                <button class="btn btn-primary" id="selectElement" title="Pick Element on Page">📌 Pick Element</button>
+                <button class="btn btn-secondary" id="inspectMode" title="Toggle Inspector Mode" disabled>🔍 Inspector</button>
+              </div>
+              <div class="execution-controls">
+                <select id="executionTiming" class="execution-timing" title="When to execute script">
+                  <option value="immediate">Execute Now</option>
+                  <option value="onload">Execute on Page Load</option>
+                  <option value="persistent">Auto-execute on Tab Switch</option>
+                </select>
+                <button class="btn btn-primary" id="executeScript">Execute</button>
+                <button class="btn btn-secondary" id="clearConsole">Clear</button>
+                <button class="btn btn-secondary" id="saveScript">Save</button>
+              </div>
+            </div>
+          </div>
+          <div class="console-content">
+            <div class="code-editor">
+              <textarea id="codeEditor" placeholder="Enter JavaScript code here..."></textarea>
+            </div>
+            <div class="console-output">
+              <div class="output-header">
+                <span class="output-title">Output:</span>
+                <div class="output-controls">
+                  <select id="outputFormat" class="output-select" title="Output Format">
+                    <option value="text">📄 Text</option>
+                    <option value="json">🌳 JSON Tree</option>
+                    <option value="table">📊 Table</option>
+                    <option value="html">🌐 HTML Preview</option>
+                  </select>
+                  <button class="btn btn-tiny" id="exportOutput" title="Export Output Data" disabled>📤 Export</button>
+                  <button class="btn btn-tiny" id="clearOutput" title="Clear Output">🗑️ Clear</button>
+                </div>
+              </div>
+              <div class="output-content" id="outputContent">
+                <div class="output-empty">No output yet. Execute some code to see results.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Status Bar -->
+    <footer class="status-bar">
+      <div class="status-info">
+        <span id="connectionStatus">Connected</span>
+        <span class="separator">•</span>
+        <span id="pageUrl">Loading...</span>
+      </div>
+      <div class="status-actions">
+        <button class="status-btn" id="exportData" title="Export Data">Export</button>
+        <button class="status-btn" id="helpBtn" title="Help">Help</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Dashboard Configuration Overlay -->
+  <div class="config-overlay" id="configOverlay">
+    <div class="config-container">
+      <div class="config-header">
+        <div class="config-title">
+          <h2>Dashboard Configuration</h2>
+          <p class="config-subtitle">Manage your pinned properties and customize your dashboard</p>
+        </div>
+        <div class="config-controls">
+          <div class="search-container">
+            <input type="text" id="configSearch" placeholder="Search properties..." class="config-search">
+          </div>
+          <button class="config-close" id="configClose" title="Close">&times;</button>
+        </div>
+      </div>
+
+      <div class="config-content">
+        <div class="config-section">
+          <div class="section-header">
+            <h3>Available Properties</h3>
+            <div class="section-filters">
+              <button class="filter-btn active" data-filter="all">All</button>
+              <button class="filter-btn" data-filter="localStorage">Local Storage</button>
+              <button class="filter-btn" data-filter="sessionStorage">Session Storage</button>
+              <button class="filter-btn" data-filter="cookie">Cookies</button>
+            </div>
+          </div>
+          <div class="properties-list" id="availablePropertiesList">
+            <div class="loading">Loading properties...</div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <div class="section-header">
+            <h3>Pinned Properties</h3>
+            <div class="section-actions">
+              <button class="action-btn" id="clearAllPinned" title="Clear All">🗑️</button>
+            </div>
+          </div>
+          <div class="pinned-properties-list" id="pinnedPropertiesList">
+            <div class="empty-state">No properties pinned yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Container -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Modal Title</h3>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-content" id="modalContent">
+        <!-- Dynamic content will be inserted here -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modalCancel">Cancel</button>
+        <button class="btn btn-primary" id="modalConfirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

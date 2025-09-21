@@ -1,0 +1,74 @@
+{
+  "manifest_version": 3,
+  "name": "1nsp3ct0rG4dg3t",
+  "version": "1.0.0",
+  "description": "Advanced web debugging tool for storage management, application inspection, and JavaScript injection",
+  "author": "1nsp3ct0rG4dg3t Team",
+
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "cookies",
+    "sidePanel"
+  ],
+
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_end"
+    }
+  ],
+
+  "action": {
+    "default_title": "1nsp3ct0rG4dg3t - Web Inspector",
+    "default_icon": {
+      "16": "assets/icons/icon16.png",
+      "32": "assets/icons/icon32.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
+    }
+  },
+
+  "side_panel": {
+    "default_path": "popup.html"
+  },
+
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "32": "assets/icons/icon32.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["injected-script.js"],
+      "matches": ["http://*/*", "https://*/*"]
+    }
+  ],
+
+  "commands": {
+    "toggle-extension": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+I",
+        "mac": "Command+Shift+I"
+      },
+      "description": "Toggle 1nsp3ct0rG4dg3t popup"
+    }
+  },
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
