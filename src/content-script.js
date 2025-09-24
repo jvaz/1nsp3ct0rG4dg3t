@@ -165,7 +165,7 @@ function getStorageObject (storageType) {
 async function executeScript (script) {
   try {
     // Create a unique identifier for this execution
-    const executionId = 'inspector_exec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+    const executionId = 'inspector_exec_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11)
 
     // Create a script element to execute in the page context (bypasses CSP)
     const scriptElement = document.createElement('script')

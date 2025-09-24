@@ -191,7 +191,7 @@ export class ScriptConsoleManager {
 
       scripts.forEach(scriptInfo => {
         const script = {
-          id: 'script_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+          id: 'script_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11),
           name: scriptInfo.name,
           description: scriptInfo.description,
           category: scriptInfo.category,
@@ -232,7 +232,7 @@ export class ScriptConsoleManager {
         targetSelector = customSelector
       }
 
-      const eventId = 'event_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6)
+      const eventId = 'event_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8)
       const eventListener = {
         id: eventId,
         eventType: eventType,
@@ -1164,7 +1164,7 @@ window.errorLog = errors;`
 
       // Create new script object
       const script = {
-        id: 'script_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        id: 'script_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11),
         name: scriptName,
         description: scriptDescription || '',
         category: scriptCategory,
