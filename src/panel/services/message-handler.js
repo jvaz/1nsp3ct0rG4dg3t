@@ -2,14 +2,14 @@
 
 export class MessageHandler {
   constructor() {
-    this.maxRetries = 2
+    this.maxRetries = 3
   }
 
-  async sendMessage(action, data = {}, maxRetries = 2) {
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+  async sendMessage(action, data = {}, maxRetries = this.maxRetries) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         // Check if extension context is still valid
-        if (!chrome.runtime?.id) {
+        if (!this.isExtensionContextValid()) {
           return { success: false, error: 'Extension context invalidated. Please reload the extension.' }
         }
 
@@ -19,10 +19,9 @@ export class MessageHandler {
           return { success: false, error: 'No active tab found' }
         }
 
-        // Check if this is a retry
+        // Wait before retry (except first attempt)
         if (attempt > 0) {
-          // Wait longer on retries
-          await new Promise(resolve => setTimeout(resolve, 500 * attempt))
+          await new Promise(resolve => setTimeout(resolve, 300 * attempt))
         }
 
         // Send message via background script to handle properly
@@ -37,13 +36,14 @@ export class MessageHandler {
           return response
         }
 
-        // If this is a connection error and we have retries left, continue
-        if (response && response.error && response.error.includes('not ready') && attempt < maxRetries) {
-          console.log(`Attempt ${attempt + 1} failed, retrying...`)
-          continue
+        // If this is the last attempt, return the error response
+        if (attempt === maxRetries - 1) {
+          return response || { success: false, error: 'No response received' }
         }
 
-        return response
+        // Log retry attempt
+        console.log(`Message attempt ${attempt + 1} failed: ${response?.error || 'Unknown error'}, retrying...`)
+
       } catch (error) {
         console.error(`Error sending message (attempt ${attempt + 1}):`, error)
 
@@ -53,7 +53,7 @@ export class MessageHandler {
         }
 
         // If this is the last attempt, return the error
-        if (attempt === maxRetries) {
+        if (attempt === maxRetries - 1) {
           return { success: false, error: error.message }
         }
 
@@ -65,38 +65,23 @@ export class MessageHandler {
     return { success: false, error: 'Max retries exceeded' }
   }
 
-  async sendMessageWithRetry(action, data = {}, maxRetries = 2) {
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        const response = await this.sendMessage(action, data)
-        if (response && response.success) {
-          return response
-        }
-
-        // If response indicates content script not ready, wait before retry
-        if (response?.error?.includes('Content script not ready')) {
-          if (attempt < maxRetries - 1) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
-            continue
-          }
-        }
-
-        return response
-      } catch (error) {
-        if (attempt < maxRetries - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
-        } else {
-          throw error
-        }
-      }
-    }
-  }
 
   async getCurrentTab() {
     try {
+      // Check extension context before attempting API call
+      if (!this.isExtensionContextValid()) {
+        console.error('Extension context invalidated while getting current tab')
+        return null
+      }
+
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
       return tabs?.[0] || null
     } catch (error) {
+      // Check if error is due to extension context invalidation
+      if (error.message && error.message.includes('Extension context invalidated')) {
+        console.error('Extension context invalidated during tab query')
+        return null
+      }
       console.error('Error getting current tab:', error)
       return null
     }
@@ -108,6 +93,30 @@ export class MessageHandler {
     } catch (error) {
       console.error('Error sending direct message:', error)
       return { success: false, error: error.message }
+    }
+  }
+
+  isExtensionContextValid() {
+    try {
+      // Multiple checks to ensure extension context is valid
+      if (!chrome || !chrome.runtime) {
+        return false
+      }
+
+      // Check if runtime ID is available
+      if (!chrome.runtime.id) {
+        return false
+      }
+
+      // Try to access extension APIs
+      if (!chrome.tabs || !chrome.tabs.query) {
+        return false
+      }
+
+      return true
+    } catch (error) {
+      console.warn('Extension context validation failed:', error)
+      return false
     }
   }
 

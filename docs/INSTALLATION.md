@@ -30,7 +30,7 @@ If you get icon loading errors, the extension includes minimal placeholder PNG f
 ### Common Issues
 - **"Could not load manifest"**: Make sure you selected the `dist` folder, not the project root
 - **Extension not visible**: Check that it's enabled in chrome://extensions/
-- **Popup not opening**: Right-click the extension icon and check for errors
+- **Panel not opening**: Right-click the extension icon and check for errors
 
 ## Development Mode
 
@@ -44,12 +44,11 @@ After making changes, click the refresh button on the extension in chrome://exte
 ## Testing the Extension
 
 1. Navigate to any website
-2. Click the 1nsp3ct0rG4dg3t extension icon
+2. Click the 1nsp3ct0rG4dg3t extension icon to open the side panel
 3. Try the different tabs:
    - **Dashboard**: Will show pinned properties (empty initially)
    - **Storage**: View/edit localStorage and sessionStorage
    - **Cookies**: Manage cookies for the current domain
-   - **App Info**: See page and performance information
    - **Console**: Execute JavaScript in the page context
 
 ## Next Steps
@@ -59,4 +58,3 @@ The extension is fully functional with all core features implemented. You can no
 - Edit localStorage/sessionStorage data
 - Manage cookies with security analysis
 - Execute custom JavaScript code
-- Inspect page and application information

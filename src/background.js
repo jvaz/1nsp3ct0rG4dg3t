@@ -1,5 +1,33 @@
 // Background service worker for 1nsp3ct0rG4dg3t Chrome extension
 
+// URL Helper Functions
+function getOriginFromUrl(url, fallback = '') {
+  if (!url || typeof url !== 'string') {
+    return fallback
+  }
+
+  try {
+    const urlObj = new URL(url)
+    return urlObj.origin || fallback
+  } catch (error) {
+    console.warn('Invalid URL provided to getOriginFromUrl:', url, error.message)
+    return fallback
+  }
+}
+
+function safeCreateUrl(url) {
+  if (!url || typeof url !== 'string') {
+    return null
+  }
+
+  try {
+    return new URL(url)
+  } catch (error) {
+    console.warn('Invalid URL provided to safeCreateUrl:', url, error.message)
+    return null
+  }
+}
+
 // Extension lifecycle management
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
@@ -20,7 +48,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   }
 })
 
-// Handle messages from content scripts and popup
+// Handle messages from content scripts and panel
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.action) {
     case 'contentScriptReady':
@@ -78,16 +106,48 @@ async function handleForwardToContentScript(request, sender, sendResponse) {
   try {
     const { tabId, payload } = request
 
-    // First check if content script is ready
-    const isReady = await checkContentScriptReady(tabId)
-    if (!isReady) {
+    // Get tab info to validate
+    const tab = await chrome.tabs.get(tabId)
+    if (!tab) {
       sendResponse({
         success: false,
-        error: 'Content script not ready. Please wait a moment and try again.'
+        error: 'Tab not found'
       })
       return
     }
 
+    // Check if tab URL supports content scripts
+    if (!isContentScriptSupported(tab.url)) {
+      sendResponse({
+        success: false,
+        error: 'Content script not supported on this page type'
+      })
+      return
+    }
+
+    // Try to send message directly first (maybe script is ready)
+    try {
+      const response = await chrome.tabs.sendMessage(tabId, payload)
+      if (response) {
+        sendResponse(response)
+        return
+      }
+    } catch (directError) {
+      // If direct send fails, check readiness and try again
+      console.log('Direct message failed, checking content script readiness')
+    }
+
+    // Check if content script is ready
+    const isReady = await checkContentScriptReady(tabId)
+    if (!isReady) {
+      sendResponse({
+        success: false,
+        error: 'Content script not ready. Try refreshing the page or wait a moment.'
+      })
+      return
+    }
+
+    // Try sending message again
     const response = await chrome.tabs.sendMessage(tabId, payload)
     sendResponse(response)
   } catch (error) {
@@ -99,6 +159,11 @@ async function handleForwardToContentScript(request, sender, sendResponse) {
         success: false,
         error: 'Content script not available. Try refreshing the page.'
       })
+    } else if (error.message.includes('No tab with id')) {
+      sendResponse({
+        success: false,
+        error: 'Tab was closed or is not accessible.'
+      })
     } else {
       sendResponse({ success: false, error: error.message })
     }
@@ -106,18 +171,23 @@ async function handleForwardToContentScript(request, sender, sendResponse) {
 }
 
 // Check if content script is ready for a tab
-async function checkContentScriptReady(tabId, maxRetries = 3) {
+async function checkContentScriptReady(tabId, maxRetries = 2) {
+  // First check if we already know it's ready
+  if (contentScriptReadyTabs.has(tabId)) {
+    return true
+  }
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       const response = await chrome.tabs.sendMessage(tabId, { action: 'ping' })
-      if (response && response.ready) {
+      if (response && response.success && response.ready) {
         contentScriptReadyTabs.add(tabId)
         return true
       }
     } catch (error) {
       // Content script not ready, wait and retry
       if (i < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)))
+        await new Promise(resolve => setTimeout(resolve, 200 * (i + 1)))
       }
     }
   }
@@ -161,8 +231,12 @@ async function handleGetCookies (request, sender, sendResponse) {
     }
 
     const tab = await chrome.tabs.get(tabId)
-    const url = new URL(tab.url)
-    const cookies = await chrome.cookies.getAll({ url: url.origin })
+    const origin = getOriginFromUrl(tab?.url)
+    if (!origin) {
+      sendResponse({ success: false, error: 'Invalid tab URL' })
+      return
+    }
+    const cookies = await chrome.cookies.getAll({ url: origin })
     sendResponse({ success: true, data: cookies })
   } catch (error) {
     sendResponse({ success: false, error: error.message })
@@ -171,7 +245,7 @@ async function handleGetCookies (request, sender, sendResponse) {
 
 async function handleSetCookie (request, sender, sendResponse) {
   try {
-    // Use tabId from request instead of sender.tab.id (which is undefined for popup calls)
+    // Use tabId from request instead of sender.tab.id (which is undefined for panel calls)
     const tabId = request.tabId || sender.tab?.id
     if (!tabId) {
       sendResponse({ success: false, error: 'No tab ID provided' })
@@ -184,7 +258,11 @@ async function handleSetCookie (request, sender, sendResponse) {
       return
     }
 
-    const url = new URL(tab.url)
+    const url = safeCreateUrl(tab.url)
+    if (!url) {
+      sendResponse({ success: false, error: 'Invalid tab URL' })
+      return
+    }
 
     // Extract cookie data from request.cookieData or fallback to top-level properties
     const cookieData = request.cookieData || request
@@ -216,7 +294,7 @@ async function handleSetCookie (request, sender, sendResponse) {
 
 async function handleDeleteCookie (request, sender, sendResponse) {
   try {
-    // Use tabId from request instead of sender.tab.id (which is undefined for popup calls)
+    // Use tabId from request instead of sender.tab.id (which is undefined for panel calls)
     const tabId = request.tabId || sender.tab?.id
     if (!tabId) {
       sendResponse({ success: false, error: 'No tab ID provided' })
@@ -229,7 +307,11 @@ async function handleDeleteCookie (request, sender, sendResponse) {
       return
     }
 
-    const url = new URL(tab.url)
+    const url = safeCreateUrl(tab.url)
+    if (!url) {
+      sendResponse({ success: false, error: 'Invalid tab URL' })
+      return
+    }
 
     // Extract cookie data from request.cookieData or fallback to top-level properties
     const cookieData = request.cookieData || request
@@ -314,3 +396,39 @@ chrome.commands.onCommand.addListener(async (command) => {
     }
   }
 })
+
+// Helper function to check if content scripts are supported on a URL
+function isContentScriptSupported(url) {
+  if (!url) return false
+
+  // Check for supported protocols
+  const supportedProtocols = ['http:', 'https:']
+  const unsupportedPages = [
+    'chrome://',
+    'chrome-extension://',
+    'moz-extension://',
+    'edge://',
+    'about:',
+    'data:',
+    'javascript:'
+  ]
+
+  try {
+    const urlObj = new URL(url)
+
+    // Check protocol
+    if (!supportedProtocols.includes(urlObj.protocol)) {
+      return false
+    }
+
+    // Check for unsupported pages
+    if (unsupportedPages.some(prefix => url.startsWith(prefix))) {
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error('Error parsing URL:', error)
+    return false
+  }
+}

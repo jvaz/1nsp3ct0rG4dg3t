@@ -48,36 +48,46 @@ export class StorageManager {
     }
 
     // Show loading state
-    container.innerHTML = '<div class="loading">Initializing storage inspection...</div>'
+    container.innerHTML = '<div class="loading">Loading storage data...</div>'
 
-    // Load storage data in background without blocking
-    this.loadStorageDataInBackground()
+    // Load storage data - let message handler handle retries
+    this.loadStorageDataAsync()
   }
 
-  async loadStorageDataInBackground() {
+  async loadStorageDataAsync() {
     const container = document.getElementById('storageItems')
 
     try {
-      // Try to load storage data with reduced retry attempts
-      const response = await this.messageHandler.sendMessageWithRetry('getStorageData', {
+      // Use simplified message sending with built-in retry logic
+      const response = await this.messageHandler.sendMessage('getStorageData', {
         storageType: this.currentStorage
-      }, 2) // Only 2 retries instead of 3
+      })
 
       if (response && response.success) {
         this.updateStorageData(this.currentStorage, response.data)
         this.displayStorageData(response.data)
       } else {
-        throw new Error(response?.error || 'Failed to load storage data')
+        // Show error state with retry button
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>Unable to load storage data</p>
+            <p class="empty-state-subtitle">${response?.error || 'Content script may not be ready'}</p>
+            <button id="storageRetryBtn" class="btn btn-primary">Retry</button>
+          </div>
+        `
+
+        const retryBtn = document.getElementById('storageRetryBtn')
+        if (retryBtn) {
+          retryBtn.addEventListener('click', () => this.loadStorageDataSmart())
+        }
       }
     } catch (error) {
-      console.log('Storage data loading pending:', error.message)
-
-      // Show user-friendly message with retry option
+      console.error('Storage loading error:', error)
       container.innerHTML = `
         <div class="empty-state">
-          <p>Storage data loading...</p>
-          <p class="empty-state-subtitle">If this page just loaded, storage access may still be initializing</p>
-          <button id="storageRetryBtn" class="btn btn-primary">Retry Loading</button>
+          <p>Storage connection error</p>
+          <p class="empty-state-subtitle">${error.message}</p>
+          <button id="storageRetryBtn" class="btn btn-primary">Retry</button>
         </div>
       `
 
@@ -85,13 +95,6 @@ export class StorageManager {
       if (retryBtn) {
         retryBtn.addEventListener('click', () => this.loadStorageDataSmart())
       }
-
-      // Auto-retry after 3 seconds if not manual
-      setTimeout(() => {
-        if (container.textContent.includes('Storage data loading...')) {
-          this.loadStorageDataInBackground()
-        }
-      }, 3000)
     }
   }
 
@@ -103,10 +106,10 @@ export class StorageManager {
     }
 
     try {
-      // Use the new retry logic with reduced attempts
-      const response = await this.messageHandler.sendMessageWithRetry('getStorageData', {
+      // Use simplified message sending
+      const response = await this.messageHandler.sendMessage('getStorageData', {
         storageType: storageType
-      }, 2) // Only 2 retries
+      })
 
       if (response && response.success) {
         this.updateStorageData(storageType, response.data)
@@ -117,7 +120,7 @@ export class StorageManager {
         return null
       }
     } catch (error) {
-      console.log(`${storageType} data loading pending:`, error.message)
+      console.log(`${storageType} data loading failed:`, error.message)
       return null
     }
   }

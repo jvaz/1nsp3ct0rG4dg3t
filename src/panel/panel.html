@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>1nsp3ct0rG4dg3t</title>
-  <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="panel.css">
 </head>
 <body>
   <div class="app" id="app">
@@ -29,7 +29,6 @@
       <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
       <button class="tab-btn" data-tab="storage">Storage</button>
       <button class="tab-btn" data-tab="cookies">Cookies</button>
-      <button class="tab-btn" data-tab="app-info">App Info</button>
       <button class="tab-btn" data-tab="console">Console</button>
     </nav>
 
@@ -39,7 +38,7 @@
       <div class="tab-content active" id="dashboard">
         <div class="dashboard-container">
           <div class="dashboard-header">
-            <h2>Custom Dashboard</h2>
+            <h2>Dashboard</h2>
             <div class="dashboard-controls">
               <select id="organizationMode" class="organization-select" title="Organization Mode">
                 <option value="default">Default Order</option>
@@ -105,32 +104,6 @@
         </div>
       </div>
 
-      <!-- App Info Tab -->
-      <div class="tab-content" id="app-info">
-        <div class="app-info-container">
-          <h2>Application Information</h2>
-          <div class="info-sections">
-            <div class="info-section">
-              <h3>Page Details</h3>
-              <div class="info-grid" id="pageInfo">
-                <div class="loading">Loading page information...</div>
-              </div>
-            </div>
-            <div class="info-section">
-              <h3>Performance</h3>
-              <div class="info-grid" id="performanceInfo">
-                <div class="loading">Loading performance data...</div>
-              </div>
-            </div>
-            <div class="info-section">
-              <h3>Security</h3>
-              <div class="info-grid" id="securityInfo">
-                <div class="loading">Loading security information...</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <!-- Console Tab -->
       <div class="tab-content" id="console">
@@ -272,6 +245,6 @@
     </div>
   </div>
 
-  <script src="popup.js"></script>
+  <script src="panel.js"></script>
 </body>
 </html>

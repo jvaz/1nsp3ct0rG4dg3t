@@ -7,7 +7,7 @@ module.exports = {
   entry: {
     background: './src/background.js',
     'content-script': './src/content-script.js',
-    popup: './src/popup/popup.js'
+    panel: './src/panel/panel.js'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -40,14 +40,14 @@ module.exports = {
           from: 'manifest.json',
           to: 'manifest.json'
         },
-        // Copy popup HTML and CSS
+        // Copy panel HTML and CSS
         {
-          from: 'src/popup/popup.html',
-          to: 'popup.html'
+          from: 'src/panel/panel.html',
+          to: 'panel.html'
         },
         {
-          from: 'src/popup/popup.css',
-          to: 'popup.css'
+          from: 'src/panel/panel.css',
+          to: 'panel.css'
         },
         // Copy assets
         {

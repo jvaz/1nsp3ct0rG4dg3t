@@ -63,10 +63,10 @@ npm run test:watch
 ```
 1nsp3ct0rG4dg3t/
 ├── src/                    # Source code
-│   ├── popup/             # Popup UI (HTML, CSS, JS)
+│   ├── panel/             # Panel UI (HTML, CSS, JS)
+│   │   └── components/    # Panel component modules
 │   ├── background.js      # Service worker
 │   ├── content-script.js  # Content script for page access
-│   ├── components/        # Reusable UI components (future)
 │   └── utils/            # Utility functions (future)
 ├── assets/               # Icons and static assets
 ├── tests/                # Test files
@@ -113,7 +113,7 @@ npm run test:watch
 - Smart loading system that handles all URL types
 - Non-blocking initialization preventing startup delays
 - Comprehensive error handling with user-friendly messages
-- Robust message passing between popup, background, and content scripts
+- Robust message passing between panel, background, and content scripts
 
 ### Recent Major Fixes
 
@@ -145,18 +145,18 @@ npm run test:watch
    - Provides access to page storage and DOM
    - Monitors storage changes in real-time
 
-4. **Popup UI (src/popup/)**
-   - Main user interface
+4. **Panel UI (src/panel/)**
+   - Main user interface using Chrome Side Panel API
    - Tabbed interface for different features
    - Responsive design with dark/light themes
 
 ### Communication Flow
 
 ```
-Popup UI ←→ Background Script ←→ Content Script ←→ Web Page
+Panel UI ←→ Background Script ←→ Content Script ←→ Web Page
 ```
 
-- Popup sends messages to background script
+- Panel sends messages to background script
 - Background script coordinates with content scripts
 - Content scripts access page storage and execute scripts
 - Real-time updates flow back through the chain
@@ -212,7 +212,7 @@ Popup UI ←→ Background Script ←→ Content Script ←→ Web Page
 ## Development Tips
 
 ### Debugging
-1. **Extension console**: Right-click extension icon → "Inspect popup"
+1. **Extension console**: Right-click extension icon → "Inspect side panel"
 2. **Background script**: Go to `chrome://extensions/` → Extension details → "Inspect background script"
 3. **Content script**: Use browser DevTools on any page
 4. **Console messages**: Check browser console for errors

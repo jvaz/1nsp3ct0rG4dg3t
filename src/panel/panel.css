@@ -422,46 +422,6 @@ body {
   min-height: 0;
 }
 
-/* App Info */
-.app-info-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.app-info-container h2 {
-  font-size: 18px;
-  color: var(--text-primary);
-  margin-bottom: 16px;
-}
-
-.info-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  flex: 1;
-  overflow-y: auto;
-}
-
-.info-section {
-  background-color: var(--bg-secondary);
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  padding: 16px;
-}
-
-.info-section h3 {
-  font-size: 14px;
-  color: var(--text-primary);
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.info-grid {
-  display: grid;
-  gap: 8px;
-}
 
 /* Console */
 .console-container {

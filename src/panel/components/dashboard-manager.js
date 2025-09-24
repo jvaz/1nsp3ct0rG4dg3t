@@ -2,6 +2,7 @@
 
 import { showToast, escapeHtml } from '../utils/ui-helpers.js'
 import { TABS, STORAGE_TYPES, TOAST_TYPES, ORGANIZATION_MODES } from '../utils/constants.js'
+import { getDomainFromTab } from '../utils/url-helpers.js'
 
 export class DashboardManager {
   constructor(messageHandler, modalManager, storageManager, cookieManager, inspector) {
@@ -13,6 +14,11 @@ export class DashboardManager {
     this.pinnedProperties = []
     this.organizationMode = ORGANIZATION_MODES.DEFAULT
     this.draggedElement = null // For drag and drop functionality
+    this.tabInfo = null
+  }
+
+  setTabInfo(tabInfo) {
+    this.tabInfo = tabInfo
   }
 
   async loadDashboardProperties() {
@@ -35,7 +41,7 @@ export class DashboardManager {
 
       // Filter pinned properties for current tab/domain
       const currentTab = await this.messageHandler.getCurrentTab()
-      const currentDomain = currentTab ? new URL(currentTab.url).hostname : 'unknown'
+      const currentDomain = getDomainFromTab(currentTab)
 
       console.log('Current domain:', currentDomain)
       const relevantProperties = pinnedProperties.filter(item =>
@@ -171,7 +177,7 @@ export class DashboardManager {
 
       // Check if already pinned for this domain
       const currentTab = await this.messageHandler.getCurrentTab()
-      const domain = currentTab ? new URL(currentTab.url).hostname : 'unknown'
+      const domain = getDomainFromTab(currentTab)
 
       const exists = pinnedProperties.some(item =>
         item.type === type &&
@@ -239,7 +245,7 @@ export class DashboardManager {
       const pinnedProperties = result.pinnedProperties || []
 
       const currentTab = await this.messageHandler.getCurrentTab()
-      const currentDomain = currentTab ? new URL(currentTab.url).hostname : 'unknown'
+      const currentDomain = getDomainFromTab(currentTab)
 
       console.log('Attempting to unpin:', { type, key, currentDomain, totalPinned: pinnedProperties.length })
 
@@ -289,22 +295,55 @@ export class DashboardManager {
     const container = document.getElementById('pinnedProperties')
     container.innerHTML = '<div class="loading">Refreshing dashboard...</div>'
 
-    // Force reload both storage types and cookies for dashboard
-    const refreshPromises = [
-      this.storageManager.loadStorageDataByType ? this.storageManager.loadStorageDataByType(STORAGE_TYPES.LOCAL) : null,
-      this.storageManager.loadStorageDataByType ? this.storageManager.loadStorageDataByType(STORAGE_TYPES.SESSION) : null,
-      this.cookieManager.loadCookies()
-    ].filter(Boolean)
-
     try {
-      await Promise.allSettled(refreshPromises)
-      console.log('All dashboard data refresh promises completed')
+      // Refresh cookies first (always works - background script)
+      const cookiePromise = this.cookieManager.loadCookies()
 
-      // Now reload dashboard with fresh data
+      // For storage, we need to handle content script dependency
+      const storagePromises = []
+
+      if (this.tabInfo && this.messageHandler.isContentScriptSupported &&
+          this.messageHandler.isContentScriptSupported(this.tabInfo.url)) {
+
+        // Only attempt storage loading if content scripts are supported
+        if (this.storageManager.loadStorageDataByType) {
+          console.log('Loading storage data for dashboard...')
+
+          // Load with timeout to prevent hanging
+          const loadStorageWithTimeout = (type) => {
+            return Promise.race([
+              this.storageManager.loadStorageDataByType(type),
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error(`${type} loading timeout`)), 5000)
+              )
+            ])
+          }
+
+          storagePromises.push(
+            loadStorageWithTimeout(STORAGE_TYPES.LOCAL).catch(err => {
+              console.warn('Local storage loading failed for dashboard:', err.message)
+              return null
+            }),
+            loadStorageWithTimeout(STORAGE_TYPES.SESSION).catch(err => {
+              console.warn('Session storage loading failed for dashboard:', err.message)
+              return null
+            })
+          )
+        }
+      } else {
+        console.log('Content scripts not supported, skipping storage data for dashboard')
+      }
+
+      // Wait for all promises (cookies + storage)
+      await Promise.allSettled([cookiePromise, ...storagePromises])
+      console.log('Dashboard data refresh completed')
+
+      // Reload dashboard with available data
       this.loadDashboardProperties()
+
     } catch (error) {
       console.error('Error refreshing dashboard:', error)
-      container.innerHTML = '<div class="empty-state"><p>Error refreshing dashboard data</p></div>'
+      container.innerHTML = '<div class="empty-state"><p>Error refreshing dashboard data</p><button class="btn btn-primary" onclick="this.closest(\'.dashboard-container\').querySelector(\'#refreshDashboard\').click()">Retry</button></div>'
     }
   }
 
@@ -393,7 +432,7 @@ export class DashboardManager {
       const pinnedProperties = result.pinnedProperties || []
 
       const currentTab = await this.messageHandler.getCurrentTab()
-      const currentDomain = currentTab ? new URL(currentTab.url).hostname : 'unknown'
+      const currentDomain = getDomainFromTab(currentTab)
 
       console.log('Updating pin button states:', {
         currentDomain,
@@ -464,7 +503,7 @@ export class DashboardManager {
 
   getCurrentDomain() {
     if (this.inspector && this.inspector.tabInfo) {
-      return new URL(this.inspector.tabInfo.url).hostname
+      return getDomainFromTab(this.inspector.tabInfo)
     }
     return 'unknown'
   }

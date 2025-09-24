@@ -2,6 +2,7 @@
 
 import { showToast, escapeHtml } from '../utils/ui-helpers.js'
 import { TOAST_TYPES } from '../utils/constants.js'
+import { getDomainFromTab } from '../utils/url-helpers.js'
 
 export class CookieManager {
   constructor(messageHandler, modalManager, inspector) {
@@ -133,7 +134,7 @@ export class CookieManager {
   async showAddCookieModal() {
     // Ensure tab info is available for form defaults
     const currentTab = await this.ensureTabInfo()
-    const domain = currentTab ? new URL(currentTab.url).hostname : ''
+    const domain = getDomainFromTab(currentTab, '')
     const isSecure = currentTab ? currentTab.url.startsWith('https:') : false
 
     const formFields = [

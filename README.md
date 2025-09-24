@@ -6,7 +6,7 @@ A powerful developer tool that provides advanced debugging and manipulation capa
 
 ## ✨ Features
 
-- **📊 Custom Dashboard**: Pin and organize localStorage, sessionStorage, and cookie values
+- **📊 Dashboard**: Pin and organize localStorage, sessionStorage, and cookie values
 - **💾 Storage Management**: Complete CRUD operations for web storage with validation
 - **🍪 Cookie Management**: Full cookie manipulation with security analysis
 - **🔧 JavaScript Console**: Execute scripts with templates, timing modes, and DOM picker

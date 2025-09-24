@@ -8,6 +8,7 @@ import { StorageManager } from './components/storage-manager.js'
 import { CookieManager } from './components/cookie-manager.js'
 import { DashboardManager } from './components/dashboard-manager.js'
 import { ScriptConsoleManager } from './components/script-console-manager.js'
+import { getDomainFromTab } from './utils/url-helpers.js'
 
 class Inspector {
   constructor () {
@@ -63,9 +64,6 @@ class Inspector {
         break
       case TABS.COOKIES:
         this.cookieManager.loadCookies()
-        break
-      case 'app-info':
-        this.loadAppInfo()
         break
       case TABS.CONSOLE:
         this.scriptConsoleManager.executePersistentScript()
@@ -276,9 +274,6 @@ class Inspector {
       case TABS.COOKIES:
         this.cookieManager.loadCookies()
         break
-      case 'app-info':
-        this.loadAppInfo()
-        break
       case TABS.CONSOLE:
         this.scriptConsoleManager.executePersistentScript()
         break
@@ -293,14 +288,38 @@ class Inspector {
 
   setupTabChangeListener () {
     // Listen for tab changes to auto-update
-    chrome.tabs.onActivated.addListener(async () => {
+    chrome.tabs.onActivated.addListener(async (activeInfo) => {
+      console.log('Tab activated:', activeInfo.tabId)
       this.handleTabChange()
     })
 
-    // Listen for tab updates (URL changes, etc.)
-    chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
-      if (changeInfo.status === 'complete' && tab.active) {
-        this.handleTabChange()
+    // Listen for tab updates (URL changes, page loads, etc.)
+    chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+      console.log('Tab updated:', tabId, changeInfo)
+
+      // Handle multiple change scenarios
+      if (tab.active) {
+        // Tab is active and something changed
+        if (changeInfo.status === 'complete') {
+          // Page finished loading
+          console.log('Active tab finished loading')
+          this.handleTabChange()
+        } else if (changeInfo.url) {
+          // URL changed (navigation)
+          console.log('Active tab URL changed')
+          this.handleTabChange()
+        } else if (changeInfo.status === 'loading') {
+          // Page started loading - clear current data
+          this.handleTabLoading()
+        }
+      }
+    })
+
+    // Listen for window focus events (when user switches back to browser)
+    chrome.windows.onFocusChanged.addListener(async (windowId) => {
+      if (windowId !== chrome.windows.WINDOW_ID_NONE) {
+        // Browser window gained focus, refresh current tab
+        setTimeout(() => this.handleTabChange(), 100)
       }
     })
   }
@@ -315,8 +334,9 @@ class Inspector {
     this.tabChangeTimeout = setTimeout(async () => {
       try {
         this.tabInfo = await this.messageHandler.getCurrentTab()
-    this.storageManager.setTabInfo(this.tabInfo)
-    this.cookieManager.setTabInfo(this.tabInfo)
+        this.storageManager.setTabInfo(this.tabInfo)
+        this.cookieManager.setTabInfo(this.tabInfo)
+        this.dashboardManager.setTabInfo(this.tabInfo)
         this.updateStatusBar()
 
         // Clear readiness cache for the new tab
@@ -332,59 +352,79 @@ class Inspector {
     }, 300) // 300ms delay to allow content script initialization
   }
 
-  async refreshCurrentTabData () {
-    // Wait a bit more for content script to be ready
-    await new Promise(resolve => setTimeout(resolve, 200))
+  handleTabLoading() {
+    // When a tab starts loading, show loading states in content areas
+    console.log('Tab started loading, showing loading states')
 
     if (this.currentTab === TABS.STORAGE) {
-      this.storageManager.loadStorageDataSmart()
-    } else if (this.currentTab === TABS.COOKIES) {
-      this.cookieManager.loadCookies()
-    } else if (this.currentTab === 'app-info') {
-      this.loadAppInfo()
+      const container = document.getElementById('storageItems')
+      if (container) {
+        container.innerHTML = '<div class="loading">Page loading...</div>'
+      }
+    } else if (this.currentTab === TABS.DASHBOARD) {
+      const container = document.getElementById('pinnedProperties')
+      if (container && !container.innerHTML.includes('No properties pinned')) {
+        container.innerHTML = '<div class="loading">Page loading...</div>'
+      }
     }
   }
 
+  async refreshCurrentTabData () {
+    // Cookies can load immediately (background script)
+    if (this.currentTab === TABS.COOKIES) {
+      this.cookieManager.loadCookies()
+      return
+    }
 
+    // Storage and Dashboard need content script readiness
+    if (this.currentTab === TABS.STORAGE || this.currentTab === TABS.DASHBOARD) {
+      await this.waitForContentScriptReadiness()
 
+      if (this.currentTab === TABS.DASHBOARD) {
+        this.dashboardManager.refreshDashboard()
+      } else if (this.currentTab === TABS.STORAGE) {
+        this.storageManager.loadStorageDataSmart()
+      }
+    }
+  }
 
+  async waitForContentScriptReadiness(maxWaitTime = 2000) {
+    const startTime = Date.now()
+    const checkInterval = 200
 
-
-
-
-
-  async loadAppInfo () {
-    // Load page info
-    const pageInfoContainer = document.getElementById('pageInfo')
-    pageInfoContainer.innerHTML = '<div class="loading">Loading page information...</div>'
-
-    try {
-      const tab = await this.messageHandler.getCurrentTab()
-      if (tab) {
-        const pageInfo = {
-          title: tab.title,
-          url: tab.url,
-          domain: new URL(tab.url).hostname,
-          protocol: new URL(tab.url).protocol,
-          status: tab.status
+    while (Date.now() - startTime < maxWaitTime) {
+      try {
+        // Check if we have a tab and it supports content scripts
+        if (!this.tabInfo || !this.messageHandler.isContentScriptSupported(this.tabInfo.url)) {
+          console.log('Tab does not support content scripts, skipping readiness check')
+          return
         }
 
-        pageInfoContainer.innerHTML = Object.entries(pageInfo)
-          .map(([key, value]) => `
-            <div class="info-item">
-              <strong>${key}:</strong> ${escapeHtml(value)}
-            </div>
-          `).join('')
+        // Try a simple ping to the content script
+        const response = await this.messageHandler.sendMessage('ping', {}, 1) // Only 1 retry
+        if (response && response.success) {
+          console.log(`Content script ready after ${Date.now() - startTime}ms`)
+          return
+        }
+      } catch (error) {
+        // Continue trying
       }
-    } catch (error) {
-      console.error('Error loading page info:', error)
-      pageInfoContainer.innerHTML = '<div class="empty-state">Error loading page information</div>'
+
+      // Wait before next attempt
+      await new Promise(resolve => setTimeout(resolve, checkInterval))
     }
 
-    // TODO: Load performance and security info
-    document.getElementById('performanceInfo').innerHTML = '<div class="empty-state">Performance metrics coming soon</div>'
-    document.getElementById('securityInfo').innerHTML = '<div class="empty-state">Security information coming soon</div>'
+    console.log(`Content script readiness check timed out after ${maxWaitTime}ms`)
   }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -562,7 +602,7 @@ class Inspector {
       const pinnedProperties = result.pinnedProperties || []
 
       const currentTab = await this.messageHandler.getCurrentTab()
-      const currentDomain = currentTab ? new URL(currentTab.url).hostname : 'unknown'
+      const currentDomain = getDomainFromTab(currentTab)
 
       const isPinned = pinnedProperties.some(prop =>
         prop.type === storageType &&
@@ -745,50 +785,52 @@ class Inspector {
   async loadDashboardWithData () {
     // Show loading state
     const container = document.getElementById('pinnedProperties')
-    container.innerHTML = '<div class="loading">Loading dashboard...</div>'
+    container.innerHTML = '<div class="loading">Loading dashboard data...</div>'
 
-    // Load data independently without race conditions
+    // Load data independently with timeout protection
     const loadPromises = []
 
     if (!this.storageData?.localStorage) {
-      console.log('Loading localStorage data for dashboard...')
       loadPromises.push(this.storageManager.loadStorageDataByType(STORAGE_TYPES.LOCAL))
     }
 
     if (!this.storageData?.sessionStorage) {
-      console.log('Loading sessionStorage data for dashboard...')
       loadPromises.push(this.storageManager.loadStorageDataByType(STORAGE_TYPES.SESSION))
     }
 
     if (!this.cookieManager.getCookieData()) {
-      console.log('Loading cookie data for dashboard...')
       loadPromises.push(this.cookieManager.loadCookies())
     }
 
-    // Wait for all data to load with error handling
+    // Wait for all data to load with error handling and timeout
     if (loadPromises.length > 0) {
-      console.log('Loading missing data for dashboard...')
       try {
-        const results = await Promise.allSettled(loadPromises)
+        // Add timeout to prevent infinite waiting
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Dashboard loading timeout')), 5000)
+        )
 
-        // Log results for debugging
-        results.forEach((result, index) => {
-          if (result.status === 'rejected') {
-            console.error(`Promise ${index} failed:`, result.reason)
-          } else {
-            console.log(`Promise ${index} succeeded:`, result.value)
+        const results = await Promise.race([
+          Promise.allSettled(loadPromises),
+          timeoutPromise
+        ])
+
+        // Process results if we got them (not timeout)
+        if (Array.isArray(results)) {
+          const successful = results.filter(r => r.status === 'fulfilled').length
+          const failed = results.length - successful
+
+          if (failed > 0) {
+            console.log(`Dashboard loaded with ${successful}/${results.length} data sources`)
           }
-        })
+        }
       } catch (error) {
-        console.error('Error loading dashboard data:', error)
+        console.log('Dashboard loading encountered issues:', error.message)
+        // Continue with whatever data we have
       }
     }
 
-    console.log('Data loading complete, rendering dashboard...')
-    console.log('Final storage data:', this.storageData)
-    console.log('Final cookie data:', this.cookieManager.getCookieData())
-
-    // Now load dashboard with available data (even if some failed)
+    // Load dashboard with available data (gracefully handle missing data)
     this.dashboardManager.loadDashboardProperties()
   }
 

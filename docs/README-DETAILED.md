@@ -8,11 +8,10 @@
 **✅ FULLY FUNCTIONAL EXTENSION** - All core features are implemented and production-ready!
 
 ### ✅ Implemented Features
-- **Custom Dashboard**: Pin localStorage, sessionStorage, and cookie values with drag-and-drop organization
+- **Dashboard**: Pin localStorage, sessionStorage, and cookie values with drag-and-drop organization
 - **Storage Management**: Complete CRUD operations for localStorage and sessionStorage with smart validation
 - **Cookie Management**: Full cookie manipulation with security analysis and all attributes support
 - **JavaScript Console**: Execute custom scripts with multiple timing modes and error handling
-- **Application Inspector**: View page metadata, tab information, and performance metrics
 - **Modern UI**: Responsive design with dark/light themes and tabbed interface
 - **Smart Loading**: Handles all URL types with graceful error handling and content script validation
 
@@ -33,7 +32,7 @@ The following sections document the original requirements and future enhancement
 
 ## Core Features
 
-### 1. Custom Dashboard (Personalized View)
+### 1. Dashboard (Personalized View)
 - **Pinned Properties**: User-selected localStorage, sessionStorage, and cookie values displayed in one view
 - **Custom Layouts**: Drag-and-drop interface to arrange pinned items
 - **Quick Actions**: Inline editing of pinned properties without switching tabs  
@@ -110,7 +109,7 @@ The following sections document the original requirements and future enhancement
 
 ### User Interface
 - **Responsive Design**: Work across different screen sizes
-- **Tabbed Interface**: Main tabs for Dashboard, Storage (localStorage/sessionStorage), Cookies, App Info, and JS Console
+- **Tabbed Interface**: Main tabs for Dashboard, Storage (localStorage/sessionStorage), Cookies, and JS Console
 - **Dark/Light Theme**: Support both theme modes
 - **Keyboard Shortcuts**: Common shortcuts for power users
 - **Context Menus**: Right-click options for common actions

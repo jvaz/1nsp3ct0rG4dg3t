@@ -41,7 +41,7 @@
   },
 
   "side_panel": {
-    "default_path": "popup.html"
+    "default_path": "panel.html"
   },
 
   "icons": {
@@ -64,7 +64,7 @@
         "default": "Ctrl+Shift+I",
         "mac": "Command+Shift+I"
       },
-      "description": "Toggle 1nsp3ct0rG4dg3t popup"
+      "description": "Toggle 1nsp3ct0rG4dg3t panel"
     }
   },
 
