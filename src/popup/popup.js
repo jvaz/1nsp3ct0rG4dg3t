@@ -27,6 +27,9 @@ class Inspector {
     this.dashboardManager = new DashboardManager(this.messageHandler, this.modalManager, this.storageManager, this.cookieManager, this)
     this.scriptConsoleManager = new ScriptConsoleManager(this.messageHandler, this.modalManager)
 
+    // Set cross-references between components
+    this.cookieManager.setDashboardManager(this.dashboardManager)
+
 
     this.init()
   }
@@ -283,7 +286,7 @@ class Inspector {
 
     // Update pin button states for storage and cookies tabs
     if (tabName === TABS.STORAGE || tabName === TABS.COOKIES) {
-      setTimeout(() => this.updatePinButtonStates(), 100)
+      setTimeout(() => this.dashboardManager.updatePinButtonStates(), 100)
     }
   }
 
@@ -345,79 +348,7 @@ class Inspector {
 
 
 
-  async loadStorageDataByType (storageType) {
-    // Check if current tab supports content scripts
-    if (!this.tabInfo || !this.messageHandler.isContentScriptSupported(this.tabInfo.url)) {
-      console.log(`Cannot load ${storageType} data: page type not supported`)
-      return null
-    }
 
-    try {
-      // Use the new retry logic with reduced attempts
-      const response = await this.messageHandler.sendMessageWithRetry('getStorageData', {
-        storageType: storageType
-      }, 2) // Only 2 retries
-
-      if (response && response.success) {
-        this.storageManager.updateStorageData(storageType, response.data)
-        console.log(`Loaded ${storageType} data:`, response.data)
-        return response.data
-      } else {
-        console.log(`Could not load ${storageType} data:`, response?.error)
-        return null
-      }
-    } catch (error) {
-      console.log(`${storageType} data loading pending:`, error.message)
-      return null
-    }
-  }
-
-  async loadStorageData () {
-    const container = document.getElementById('storageItems')
-    container.innerHTML = '<div class="loading">Loading storage data...</div>'
-
-    try {
-      // Ensure content script is ready before attempting to get storage data
-      await this.pingContentScript()
-
-      const response = await this.messageHandler.sendMessage('getStorageData', {
-        storageType: this.storageManager.getCurrentStorage()
-      })
-
-      if (response && response.success) {
-        this.storageManager.updateStorageData(this.storageManager.getCurrentStorage(), response.data)
-        this.storageManager.displayStorageData(response.data)
-      } else {
-        const errorMsg = response?.error || 'Unknown error'
-        container.innerHTML = `
-          <div class="empty-state">
-            <p>Error loading storage data</p>
-            <p class="empty-state-subtitle">${errorMsg}</p>
-            <button class="btn btn-secondary retry-storage-btn">Retry</button>
-          </div>
-        `
-        // Add event listener to retry button
-        const retryBtn = container.querySelector('.retry-storage-btn')
-        if (retryBtn) {
-          retryBtn.addEventListener('click', () => this.storageManager.loadStorageDataSmart())
-        }
-      }
-    } catch (error) {
-      console.error('Error loading storage data:', error)
-      container.innerHTML = `
-        <div class="empty-state">
-          <p>Error loading storage data</p>
-          <p class="empty-state-subtitle">${error.message}</p>
-          <button class="btn btn-secondary retry-storage-btn">Retry</button>
-        </div>
-      `
-      // Add event listener to retry button
-      const retryBtn = container.querySelector('.retry-storage-btn')
-      if (retryBtn) {
-        retryBtn.addEventListener('click', () => this.storageManager.loadStorageDataSmart())
-      }
-    }
-  }
 
 
 
@@ -455,99 +386,8 @@ class Inspector {
     document.getElementById('securityInfo').innerHTML = '<div class="empty-state">Security information coming soon</div>'
   }
 
-  attachStorageItemListeners () {
-    // Update pin button states first
-    this.updatePinButtonStates()
 
-    // Add pin button listeners
-    document.querySelectorAll('.storage-item .pin-btn').forEach(button => {
-      button.addEventListener('click', (e) => {
-        const storageItem = e.target.closest('.storage-item')
-        const key = storageItem.dataset.key
-        const storageType = this.storageManager.getCurrentStorage() || STORAGE_TYPES.LOCAL
 
-        if (button.classList.contains('pinned')) {
-          // If already pinned, unpin it
-          this.dashboardManager.unpinPropertyByKey(storageType, key)
-        } else {
-          // If not pinned, pin it
-          this.dashboardManager.pinProperty(storageType, key)
-        }
-      })
-    })
-
-    // Add edit button listeners
-    document.querySelectorAll('.storage-item .edit-btn').forEach(button => {
-      button.addEventListener('click', (e) => {
-        const storageItem = e.target.closest('.storage-item')
-        const key = storageItem.dataset.key
-        this.storageManager.showEditStorageModal(key)
-      })
-    })
-
-    // Add delete button listeners
-    document.querySelectorAll('.storage-item .delete-btn').forEach(button => {
-      button.addEventListener('click', (e) => {
-        const storageItem = e.target.closest('.storage-item')
-        const key = storageItem.dataset.key
-        this.storageManager.showDeleteStorageModal(key)
-      })
-    })
-  }
-
-  attachCookieItemListeners () {
-    // Update pin button states first
-    this.updatePinButtonStates()
-
-    // Add pin button listeners
-    document.querySelectorAll('.cookie-item .pin-btn').forEach(button => {
-      button.addEventListener('click', (e) => {
-        const cookieItem = e.target.closest('.cookie-item')
-        const key = cookieItem.dataset.name
-
-        if (button.classList.contains('pinned')) {
-          // If already pinned, unpin it
-          this.dashboardManager.unpinPropertyByKey('cookie', key)
-        } else {
-          // If not pinned, pin it
-          this.dashboardManager.pinProperty('cookie', key)
-        }
-      })
-    })
-
-    // Add edit button listeners
-    document.querySelectorAll('.cookie-item .edit-btn').forEach(button => {
-      button.addEventListener('click', async (e) => {
-        try {
-          const cookieItem = e.target.closest('.cookie-item')
-          const cookieName = cookieItem.dataset.name
-          await this.cookieManager.showEditCookieModal(cookieName)
-        } catch (error) {
-          console.error('Error showing edit cookie modal:', error)
-          showToast(`Error: ${error.message}`, TOAST_TYPES.ERROR)
-        }
-      })
-    })
-
-    // Add delete button listeners
-    document.querySelectorAll('.cookie-item .delete-btn').forEach(button => {
-      button.addEventListener('click', (e) => {
-        const cookieItem = e.target.closest('.cookie-item')
-        const cookieName = cookieItem.dataset.name
-        this.cookieManager.showDeleteCookieConfirmation(cookieName)
-      })
-    })
-  }
-
-  filterStorage (query) {
-    const items = document.querySelectorAll('.storage-item')
-    items.forEach(item => {
-      const key = item.dataset.key.toLowerCase()
-      const value = item.querySelector('.storage-value').textContent.toLowerCase()
-      const matches = key.includes(query.toLowerCase()) || value.includes(query.toLowerCase())
-      item.style.display = matches ? 'block' : 'none'
-    })
-  }
 
 
   showDashboardConfig () {
@@ -574,7 +414,7 @@ class Inspector {
 
     // Search functionality
     document.getElementById('configSearch').addEventListener('input', (e) => {
-      this.filterConfigProperties(e.target.value)
+      this.dashboardManager.filterConfigProperties(e.target.value)
     })
 
     // Filter buttons
@@ -582,7 +422,7 @@ class Inspector {
       btn.addEventListener('click', (e) => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'))
         e.target.classList.add('active')
-        this.filterPropertiesByType(e.target.dataset.filter)
+        this.dashboardManager.filterPropertiesByType(e.target.dataset.filter)
       })
     })
 
@@ -605,7 +445,7 @@ class Inspector {
 
   async loadConfigData () {
     await Promise.all([
-      this.loadAvailablePropertiesNew(),
+      this.dashboardManager.loadAvailablePropertiesNew(),
       this.dashboardManager.loadPinnedProperties()
     ])
   }
@@ -651,113 +491,8 @@ class Inspector {
     return String(value)
   }
 
-  async loadAvailablePropertiesNew () {
-    try {
-      const container = document.getElementById('availablePropertiesList')
-      container.innerHTML = '<div class="loading">Loading properties...</div>'
-
-      // Use cached data or load fresh
-      let storageData = this.storageData
-      let cookieData = this.cookieManager.getCookieData()
-
-      if (!storageData && !cookieData) {
-        // Use smart loading for storage data (non-blocking)
-        this.storageManager.loadStorageDataSmart()
-        await this.cookieManager.loadCookies()
-        storageData = this.storageData
-        cookieData = this.cookieManager.getCookieData()
-      }
-
-      // Build property cards with modern design
-      let html = ''
-      const allProperties = []
-
-      // Add localStorage properties
-      if (storageData?.localStorage) {
-        Object.entries(storageData.localStorage).forEach(([key, value]) => {
-          allProperties.push({
-            type: STORAGE_TYPES.LOCAL,
-            key,
-            value,
-            domain: this.getCurrentDomain()
-          })
-        })
-      }
-
-      // Add sessionStorage properties
-      if (storageData?.sessionStorage) {
-        Object.entries(storageData.sessionStorage).forEach(([key, value]) => {
-          allProperties.push({
-            type: STORAGE_TYPES.SESSION,
-            key,
-            value,
-            domain: this.getCurrentDomain()
-          })
-        })
-      }
-
-      // Add cookies
-      if (cookieData && cookieData.length > 0) {
-        cookieData.forEach(cookie => {
-          allProperties.push({
-            type: 'cookie',
-            key: cookie.name,
-            value: cookie.value,
-            domain: cookie.domain || this.getCurrentDomain()
-          })
-        })
-      }
-
-      if (allProperties.length === 0) {
-        html = `
-          <div class="config-empty-state">
-            <h4>No properties found</h4>
-            <p>No storage items or cookies are available for this page</p>
-          </div>
-        `
-      } else {
-        allProperties.forEach(prop => {
-          const valuePreview = this.truncateValue(prop.value, 20)
-          html += `
-            <div class="property-card" data-type="${prop.type}" data-key="${escapeHtml(prop.key)}">
-              <div class="property-info">
-                <div class="property-name">${escapeHtml(prop.key)}</div>
-                <div class="property-details">
-                  <span class="property-type ${prop.type}">${this.getTypeDisplayName(prop.type)}</span>
-                  <span class="property-domain">${prop.domain}</span>
-                  <span class="property-value-preview">${escapeHtml(valuePreview)}</span>
-                </div>
-              </div>
-              <div class="property-actions">
-                <button class="pin-btn" data-type="${prop.type}" data-key="${escapeHtml(prop.key)}">Pin</button>
-              </div>
-            </div>
-          `
-        })
-      }
-
-      container.innerHTML = html
-      this.allAvailableProperties = allProperties
-
-      // Add event listeners for pin buttons
-      container.querySelectorAll('.pin-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation()
-          this.dashboardManager.pinProperty(btn.dataset.type, btn.dataset.key)
-        })
-      })
-
-    } catch (error) {
-      console.error('Error loading available properties:', error)
-      document.getElementById('availablePropertiesList').innerHTML =
-        '<div class="config-empty-state"><h4>Error</h4><p>Failed to load properties</p></div>'
-    }
-  }
 
 
-  getCurrentDomain () {
-    return this.tabInfo ? new URL(this.tabInfo.url).hostname : 'unknown'
-  }
 
   async ensureTabInfo () {
     console.log('ensureTabInfo: Current tabInfo:', this.tabInfo)
@@ -804,11 +539,6 @@ class Inspector {
     throw new Error('Content script not ready. Please wait a moment and try again.')
   }
 
-  truncateValue (value, maxLength) {
-    if (!value) return ''
-    const str = String(value)
-    return str.length > maxLength ? str.substring(0, maxLength) + '...' : str
-  }
 
 
   async clearAllPinnedProperties () {
@@ -823,28 +553,6 @@ class Inspector {
     }
   }
 
-  filterConfigProperties (query) {
-    if (!this.allAvailableProperties) return
-
-    const cards = document.querySelectorAll('#availablePropertiesList .property-card')
-    cards.forEach(card => {
-      const key = card.dataset.key.toLowerCase()
-      const type = card.dataset.type.toLowerCase()
-      const matches = key.includes(query.toLowerCase()) || type.includes(query.toLowerCase())
-      card.style.display = matches ? 'flex' : 'none'
-    })
-  }
-
-  filterPropertiesByType (filter) {
-    if (!this.allAvailableProperties) return
-
-    const cards = document.querySelectorAll('#availablePropertiesList .property-card')
-    cards.forEach(card => {
-      const type = card.dataset.type
-      const shouldShow = filter === 'all' || type === filter
-      card.style.display = shouldShow ? 'flex' : 'none'
-    })
-  }
 
 
   async updateDashboardIfNeeded (storageType, key) {
@@ -872,97 +580,6 @@ class Inspector {
   }
 
 
-  showDeleteStorageConfirmation (key) {
-    const storageType = this.storageManager.getCurrentStorage() || STORAGE_TYPES.LOCAL
-    const currentValue = this.storageData[storageType]?.[key]
-
-    if (currentValue === undefined) {
-      showToast(`Storage item "${key}" not found`, 'error')
-      return
-    }
-
-    // Format value for display
-    let displayValue = currentValue
-    if (typeof currentValue === 'object' && currentValue !== null) {
-      displayValue = JSON.stringify(currentValue)
-    } else {
-      displayValue = String(currentValue)
-    }
-
-    // Truncate long values for display
-    if (displayValue.length > 100) {
-      displayValue = displayValue.substring(0, 100) + '...'
-    }
-
-    const confirmationHtml = `
-      <div class="delete-confirmation">
-        <div class="warning-icon" style="font-size: 24px; color: var(--danger-color); text-align: center; margin-bottom: 16px;">⚠️</div>
-        <p>Are you sure you want to delete this storage item?</p>
-        <div class="delete-details">
-          <strong>Storage Type:</strong> ${this.getTypeDisplayName(storageType)}<br>
-          <strong>Key:</strong> <code>${escapeHtml(key)}</code><br>
-          <strong>Value:</strong> <code>${escapeHtml(displayValue)}</code>
-        </div>
-        <p style="color: var(--danger-color); font-size: 12px; margin-top: 16px;">
-          This action cannot be undone.
-        </p>
-      </div>
-    `
-
-    this.modalManager.showModal(
-      'Delete Storage Item',
-      confirmationHtml,
-      () => this.handleDeleteStorageItem(key),
-      {
-        confirmText: 'Delete',
-        cancelText: 'Cancel'
-      }
-    )
-
-    // Style the confirm button as dangerous
-    setTimeout(() => {
-      const confirmBtn = document.getElementById('modalConfirm')
-      if (confirmBtn) {
-        confirmBtn.style.backgroundColor = 'var(--danger-color)'
-        confirmBtn.style.borderColor = 'var(--danger-color)'
-      }
-    }, 100)
-  }
-
-  async handleDeleteStorageItem (key) {
-    try {
-      const storageType = this.storageManager.getCurrentStorage() || STORAGE_TYPES.LOCAL
-
-      // Send message to content script to delete the storage item
-      const response = await this.messageHandler.sendMessage('removeStorageData', {
-        storageType: storageType,
-        key: key
-      })
-
-      if (response && response.success) {
-        showToast(`${key} deleted from ${storageType}`, TOAST_TYPES.SUCCESS)
-
-        // Update local cache
-        if (this.storageData[storageType]) {
-          delete this.storageData[storageType][key]
-        }
-
-        // Refresh the current view if we're on the storage tab
-        if (this.currentTab === 'storage' && this.storageManager.getCurrentStorage() === storageType) {
-          this.storageManager.displayStorageData(this.storageData[storageType])
-        }
-
-        // Update dashboard if this storage item was pinned
-        this.updateDashboardIfNeeded(storageType, key)
-      } else {
-        throw new Error(response?.error || 'Failed to delete storage item')
-      }
-    } catch (error) {
-      console.error('Error deleting storage item:', error)
-      showToast(`Error: ${error.message}`, 'error')
-      throw error // Re-throw to prevent modal from closing
-    }
-  }
 
   async loadAvailableProperties () {
     try {
@@ -1135,12 +752,12 @@ class Inspector {
 
     if (!this.storageData?.localStorage) {
       console.log('Loading localStorage data for dashboard...')
-      loadPromises.push(this.loadStorageDataByType(STORAGE_TYPES.LOCAL))
+      loadPromises.push(this.storageManager.loadStorageDataByType(STORAGE_TYPES.LOCAL))
     }
 
     if (!this.storageData?.sessionStorage) {
       console.log('Loading sessionStorage data for dashboard...')
-      loadPromises.push(this.loadStorageDataByType(STORAGE_TYPES.SESSION))
+      loadPromises.push(this.storageManager.loadStorageDataByType(STORAGE_TYPES.SESSION))
     }
 
     if (!this.cookieManager.getCookieData()) {
@@ -1249,75 +866,7 @@ class Inspector {
     }
   }
 
-  getTypeDisplayName (type) {
-    switch (type) {
-      case STORAGE_TYPES.LOCAL:
-        return 'Local Storage'
-      case STORAGE_TYPES.SESSION:
-        return 'Session Storage'
-      case 'cookie':
-        return 'Cookies'
-      default:
-        return type
-    }
-  }
 
-  async updatePinButtonStates () {
-    try {
-      const result = await chrome.storage.local.get(['pinnedProperties'])
-      const pinnedProperties = result.pinnedProperties || []
-
-      const currentTab = await this.messageHandler.getCurrentTab()
-      const currentDomain = currentTab ? new URL(currentTab.url).hostname : 'unknown'
-
-      // Update storage item pin buttons
-      document.querySelectorAll('.storage-item').forEach(item => {
-        const key = item.dataset.key
-        const storageType = this.storageManager.getCurrentStorage() || STORAGE_TYPES.LOCAL
-        const isPinned = pinnedProperties.some(prop =>
-          prop.type === storageType &&
-          prop.key === key &&
-          prop.domain === currentDomain
-        )
-
-        const pinBtn = item.querySelector('.pin-btn')
-        if (pinBtn) {
-          pinBtn.innerHTML = '●' // Use a simple dot that can be colored with CSS
-          if (isPinned) {
-            pinBtn.title = 'Click to unpin from Dashboard'
-            pinBtn.classList.add('pinned')
-          } else {
-            pinBtn.title = 'Click to pin to Dashboard'
-            pinBtn.classList.remove('pinned')
-          }
-        }
-      })
-
-      // Update cookie item pin buttons
-      document.querySelectorAll('.cookie-item').forEach(item => {
-        const key = item.dataset.name
-        const isPinned = pinnedProperties.some(prop =>
-          prop.type === 'cookie' &&
-          prop.key === key &&
-          prop.domain === currentDomain
-        )
-
-        const pinBtn = item.querySelector('.pin-btn')
-        if (pinBtn) {
-          pinBtn.innerHTML = '●' // Use a simple dot that can be colored with CSS
-          if (isPinned) {
-            pinBtn.title = 'Click to unpin from Dashboard'
-            pinBtn.classList.add('pinned')
-          } else {
-            pinBtn.title = 'Click to pin to Dashboard'
-            pinBtn.classList.remove('pinned')
-          }
-        }
-      })
-    } catch (error) {
-      console.error('Error updating pin button states:', error)
-    }
-  }
 
   async changeOrganizationMode (mode) {
     this.organizationMode = mode
@@ -1332,119 +881,7 @@ class Inspector {
   }
 
 
-  setupDragAndDrop () {
-    const draggableItems = document.querySelectorAll('.dashboard-property[draggable="true"]')
 
-    draggableItems.forEach(item => {
-      item.addEventListener('dragstart', this.handleDragStart.bind(this))
-      item.addEventListener('dragend', this.handleDragEnd.bind(this))
-      item.addEventListener('dragover', this.handleDragOver.bind(this))
-      item.addEventListener('drop', this.handleDrop.bind(this))
-      item.addEventListener('dragenter', this.handleDragEnter.bind(this))
-      item.addEventListener('dragleave', this.handleDragLeave.bind(this))
-    })
-  }
-
-  handleDragStart (e) {
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/html', e.target.outerHTML)
-    e.dataTransfer.setData('text/plain', JSON.stringify({
-      type: e.target.dataset.propertyType,
-      key: e.target.dataset.propertyKey,
-      domain: e.target.dataset.propertyDomain
-    }))
-
-    e.target.classList.add('dragging')
-    this.draggedElement = e.target
-  }
-
-  handleDragEnd (e) {
-    e.target.classList.remove('dragging')
-    this.draggedElement = null
-
-    // Remove all drag visual indicators
-    document.querySelectorAll('.dashboard-property').forEach(item => {
-      item.classList.remove('drag-over')
-    })
-  }
-
-  handleDragOver (e) {
-    if (e.preventDefault) {
-      e.preventDefault()
-    }
-    e.dataTransfer.dropEffect = 'move'
-    return false
-  }
-
-  handleDragEnter (e) {
-    e.target.classList.add('drag-over')
-  }
-
-  handleDragLeave (e) {
-    e.target.classList.remove('drag-over')
-  }
-
-  async handleDrop (e) {
-    if (e.stopPropagation) {
-      e.stopPropagation()
-    }
-
-    e.target.classList.remove('drag-over')
-
-    if (this.draggedElement !== e.target) {
-      await this.reorderProperties(this.draggedElement, e.target)
-    }
-
-    return false
-  }
-
-  async reorderProperties (draggedElement, targetElement) {
-    try {
-      const draggedData = {
-        type: draggedElement.dataset.propertyType,
-        key: draggedElement.dataset.propertyKey,
-        domain: draggedElement.dataset.propertyDomain
-      }
-
-      const targetData = {
-        type: targetElement.dataset.propertyType,
-        key: targetElement.dataset.propertyKey,
-        domain: targetElement.dataset.propertyDomain
-      }
-
-      // Get current pinned properties
-      const result = await chrome.storage.local.get(['pinnedProperties'])
-      const pinnedProperties = result.pinnedProperties || []
-
-      // Find the indices of the dragged and target items
-      const draggedIndex = pinnedProperties.findIndex(prop =>
-        prop.type === draggedData.type &&
-        prop.key === draggedData.key &&
-        prop.domain === draggedData.domain
-      )
-
-      const targetIndex = pinnedProperties.findIndex(prop =>
-        prop.type === targetData.type &&
-        prop.key === targetData.key &&
-        prop.domain === targetData.domain
-      )
-
-      if (draggedIndex !== -1 && targetIndex !== -1) {
-        // Remove the dragged item and insert it at the target position
-        const [draggedItem] = pinnedProperties.splice(draggedIndex, 1)
-        pinnedProperties.splice(targetIndex, 0, draggedItem)
-
-        // Update the instance variable and save
-        this.pinnedProperties = pinnedProperties
-        await this.saveSettings()
-
-        // Reload the dashboard
-        await this.dashboardManager.loadDashboardProperties()
-      }
-    } catch (error) {
-      console.error('Error reordering properties:', error)
-    }
-  }
 
   handleOutputFormatChange(format) {
     // Delegate to ScriptConsoleManager

@@ -8,8 +8,13 @@ export class CookieManager {
     this.messageHandler = messageHandler
     this.modalManager = modalManager
     this.inspector = inspector
+    this.dashboardManager = null // Will be set after DashboardManager is created
     this.cookieData = []
     this.tabInfo = null
+  }
+
+  setDashboardManager(dashboardManager) {
+    this.dashboardManager = dashboardManager
   }
 
   setTabInfo(tabInfo) {
@@ -108,10 +113,8 @@ export class CookieManager {
 
     container.innerHTML = html
 
-    // Use Inspector's attach method for full pin/edit/delete functionality
-    if (this.inspector && this.inspector.attachCookieItemListeners) {
-      this.inspector.attachCookieItemListeners()
-    }
+    // Use our own method for full pin/edit/delete functionality
+    this.attachCookieItemListeners()
   }
 
   filterCookies(query) {
@@ -584,6 +587,56 @@ export class CookieManager {
       showToast(`Error: ${error.message}`, TOAST_TYPES.ERROR)
       throw error // Re-throw to prevent modal from closing
     }
+  }
+
+  attachCookieItemListeners() {
+    // Update pin button states first - delegate to dashboard manager
+    if (this.dashboardManager && this.dashboardManager.updatePinButtonStates) {
+      this.dashboardManager.updatePinButtonStates()
+    }
+
+    // Add pin button listeners
+    document.querySelectorAll('.cookie-item .pin-btn').forEach(button => {
+      button.addEventListener('click', (e) => {
+        const cookieItem = e.target.closest('.cookie-item')
+        const key = cookieItem.dataset.name
+
+        if (button.classList.contains('pinned')) {
+          // If already pinned, unpin it
+          if (this.dashboardManager) {
+            this.dashboardManager.unpinPropertyByKey('cookie', key)
+          }
+        } else {
+          // If not pinned, pin it
+          if (this.dashboardManager) {
+            this.dashboardManager.pinProperty('cookie', key)
+          }
+        }
+      })
+    })
+
+    // Add edit button listeners
+    document.querySelectorAll('.cookie-item .edit-btn').forEach(button => {
+      button.addEventListener('click', async (e) => {
+        try {
+          const cookieItem = e.target.closest('.cookie-item')
+          const cookieName = cookieItem.dataset.name
+          await this.showEditCookieModal(cookieName)
+        } catch (error) {
+          console.error('Error showing edit cookie modal:', error)
+          showToast(`Error: ${error.message}`, TOAST_TYPES.ERROR)
+        }
+      })
+    })
+
+    // Add delete button listeners
+    document.querySelectorAll('.cookie-item .delete-btn').forEach(button => {
+      button.addEventListener('click', (e) => {
+        const cookieItem = e.target.closest('.cookie-item')
+        const cookieName = cookieItem.dataset.name
+        this.showDeleteCookieConfirmation(cookieName)
+      })
+    })
   }
 
   getCookieData() {

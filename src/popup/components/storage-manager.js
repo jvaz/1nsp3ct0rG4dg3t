@@ -104,18 +104,20 @@ export class StorageManager {
 
     try {
       // Use the new retry logic with reduced attempts
-      const response = await this.messageHandler.sendMessage('getStorageData', {
-        storageType
-      }, 1) // Reduced retries for background loading
+      const response = await this.messageHandler.sendMessageWithRetry('getStorageData', {
+        storageType: storageType
+      }, 2) // Only 2 retries
 
       if (response && response.success) {
+        this.updateStorageData(storageType, response.data)
+        console.log(`Loaded ${storageType} data:`, response.data)
         return response.data
       } else {
-        console.log(`Failed to load ${storageType}:`, response?.error)
+        console.log(`Could not load ${storageType} data:`, response?.error)
         return null
       }
     } catch (error) {
-      console.log(`Error loading ${storageType}:`, error.message)
+      console.log(`${storageType} data loading pending:`, error.message)
       return null
     }
   }
@@ -184,10 +186,8 @@ export class StorageManager {
 
     container.innerHTML = html
 
-    // Use Inspector's attach method for full pin/edit/delete functionality
-    if (this.inspector && this.inspector.attachStorageItemListeners) {
-      this.inspector.attachStorageItemListeners()
-    }
+    // Use our own method for full pin/edit/delete functionality
+    this.attachStorageItemListeners()
   }
 
   renderStorageItem(key, value) {
@@ -445,6 +445,52 @@ export class StorageManager {
     if (this.inspector && this.inspector.loadDashboardProperties) {
       setTimeout(() => this.inspector.loadDashboardProperties(), 100)
     }
+  }
+
+  attachStorageItemListeners() {
+    // Update pin button states first - delegate to dashboard manager
+    if (this.inspector && this.inspector.dashboardManager && this.inspector.dashboardManager.updatePinButtonStates) {
+      this.inspector.dashboardManager.updatePinButtonStates()
+    }
+
+    // Add pin button listeners
+    document.querySelectorAll('.storage-item .pin-btn').forEach(button => {
+      button.addEventListener('click', (e) => {
+        const storageItem = e.target.closest('.storage-item')
+        const key = storageItem.dataset.key
+        const storageType = this.getCurrentStorage() || STORAGE_TYPES.LOCAL
+
+        if (button.classList.contains('pinned')) {
+          // If already pinned, unpin it
+          if (this.inspector && this.inspector.dashboardManager) {
+            this.inspector.dashboardManager.unpinPropertyByKey(storageType, key)
+          }
+        } else {
+          // If not pinned, pin it
+          if (this.inspector && this.inspector.dashboardManager) {
+            this.inspector.dashboardManager.pinProperty(storageType, key)
+          }
+        }
+      })
+    })
+
+    // Add edit button listeners
+    document.querySelectorAll('.storage-item .edit-btn').forEach(button => {
+      button.addEventListener('click', (e) => {
+        const storageItem = e.target.closest('.storage-item')
+        const key = storageItem.dataset.key
+        this.showEditStorageModal(key)
+      })
+    })
+
+    // Add delete button listeners
+    document.querySelectorAll('.storage-item .delete-btn').forEach(button => {
+      button.addEventListener('click', (e) => {
+        const storageItem = e.target.closest('.storage-item')
+        const key = storageItem.dataset.key
+        this.showDeleteStorageModal(key)
+      })
+    })
   }
 
   getCurrentStorageData() {
