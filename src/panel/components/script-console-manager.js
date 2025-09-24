@@ -881,9 +881,9 @@ window.errorLog = errors;`
         } else {
           this.addOutput(`Error: ${response.error}`, TOAST_TYPES.ERROR)
         }
-      } else if (timing === 'onload') {
+      } else if (timing === EXECUTION_TIMING.ON_LOAD) {
         // Store script to execute on next page load
-        await this.saveScriptForLater(code, 'onload')
+        await this.saveScriptForLater(code, EXECUTION_TIMING.ON_LOAD)
         this.addOutput('Script saved to execute on next page load', TOAST_TYPES.INFO)
       } else if (timing === EXECUTION_TIMING.PERSISTENT) {
         // Store script to auto-execute on tab switch
@@ -900,7 +900,7 @@ window.errorLog = errors;`
 
   async saveScriptForLater(script, timing) {
     try {
-      const key = timing === 'onload' ? 'onloadScript' : 'persistentScript'
+      const key = timing === EXECUTION_TIMING.ON_LOAD ? 'onloadScript' : 'persistentScript'
       await chrome.storage.local.set({ [key]: script })
     } catch (error) {
       console.error('Error saving script:', error)

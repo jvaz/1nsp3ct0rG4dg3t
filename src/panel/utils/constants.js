@@ -39,7 +39,7 @@ export const ORGANIZATION_MODES = {
 // Script execution timing options
 export const EXECUTION_TIMING = {
   IMMEDIATE: 'immediate',
-  ON_LOAD: 'onLoad',
+  ON_LOAD: 'onload',
   PERSISTENT: 'persistent'
 }
 
