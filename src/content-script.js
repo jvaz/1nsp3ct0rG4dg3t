@@ -4,6 +4,10 @@
 // Track content script readiness
 let isContentScriptReady = false
 
+// Event listener management
+const eventListeners = new Map()
+let eventListenerCounter = 0
+
 // Establish communication with the extension
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Handle ping requests to check readiness
@@ -57,6 +61,21 @@ async function handleMessage (request, sender, sendResponse) {
         break
       case 'getConsoleMessages':
         sendResponse(await getConsoleMessages())
+        break
+      case 'addEventListener':
+        sendResponse(await addEventListenerHandler(request.eventListener))
+        break
+      case 'removeEventListener':
+        sendResponse(await removeEventListenerHandler(request.listenerId))
+        break
+      case 'toggleEventListener':
+        sendResponse(await toggleEventListenerHandler(request.listenerId))
+        break
+      case 'clearAllEventListeners':
+        sendResponse(await clearAllEventListenersHandler())
+        break
+      case 'getEventListeners':
+        sendResponse(await getEventListenersHandler())
         break
       default:
         sendResponse({ success: false, error: 'Unknown action' })
@@ -565,6 +584,177 @@ async function executeOnloadScript() {
     }
   } catch (error) {
     console.error('Error executing onload script:', error)
+  }
+}
+
+// Event Listener Management Functions
+
+async function addEventListenerHandler(eventListenerData) {
+  try {
+    const { id, eventType, target, script, created, active } = eventListenerData
+
+    // Get the target element(s)
+    let targetElement
+    if (target === 'document') {
+      targetElement = document
+    } else if (target === 'window') {
+      targetElement = window
+    } else if (target === 'body') {
+      targetElement = document.body
+    } else {
+      // Custom selector
+      targetElement = document.querySelector(target)
+      if (!targetElement) {
+        return { success: false, error: `Target element not found: ${target}` }
+      }
+    }
+
+    // Create the event handler function
+    const eventHandler = async function(event) {
+      if (!eventListeners.get(id)?.active) return // Skip if disabled
+
+      try {
+        console.log(`🎯 Event triggered: ${eventType} on ${target}`)
+
+        // Execute the script in page context
+        const result = await executeScript(script)
+
+        // Optionally send results back to extension
+        chrome.runtime.sendMessage({
+          action: 'eventScriptExecuted',
+          eventId: id,
+          eventType: eventType,
+          target: target,
+          result: result,
+          timestamp: Date.now()
+        }).catch(() => {
+          // Extension might not be listening, ignore errors
+        })
+
+      } catch (error) {
+        console.error(`Error executing event script for ${eventType}:`, error)
+        chrome.runtime.sendMessage({
+          action: 'eventScriptError',
+          eventId: id,
+          eventType: eventType,
+          target: target,
+          error: error.message,
+          timestamp: Date.now()
+        }).catch(() => {
+          // Extension might not be listening, ignore errors
+        })
+      }
+    }
+
+    // Add the event listener
+    targetElement.addEventListener(eventType, eventHandler, { passive: true })
+
+    // Store the listener data
+    eventListeners.set(id, {
+      id,
+      eventType,
+      target,
+      script,
+      created,
+      active,
+      handler: eventHandler,
+      element: targetElement
+    })
+
+    return { success: true, message: `Event listener added for ${eventType} on ${target}` }
+  } catch (error) {
+    console.error('Error adding event listener:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+async function removeEventListenerHandler(listenerId) {
+  try {
+    const listener = eventListeners.get(listenerId)
+    if (!listener) {
+      return { success: false, error: 'Event listener not found' }
+    }
+
+    // Remove the actual event listener
+    listener.element.removeEventListener(listener.eventType, listener.handler)
+
+    // Remove from our tracking
+    eventListeners.delete(listenerId)
+
+    return { success: true, message: 'Event listener removed' }
+  } catch (error) {
+    console.error('Error removing event listener:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+async function toggleEventListenerHandler(listenerId) {
+  try {
+    const listener = eventListeners.get(listenerId)
+    if (!listener) {
+      return { success: false, error: 'Event listener not found' }
+    }
+
+    // Toggle the active state
+    listener.active = !listener.active
+    eventListeners.set(listenerId, listener)
+
+    return {
+      success: true,
+      message: `Event listener ${listener.active ? 'enabled' : 'disabled'}`,
+      active: listener.active
+    }
+  } catch (error) {
+    console.error('Error toggling event listener:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+async function clearAllEventListenersHandler() {
+  try {
+    let removedCount = 0
+
+    for (const [id, listener] of eventListeners) {
+      try {
+        listener.element.removeEventListener(listener.eventType, listener.handler)
+        removedCount++
+      } catch (error) {
+        console.warn(`Error removing listener ${id}:`, error)
+      }
+    }
+
+    eventListeners.clear()
+
+    return {
+      success: true,
+      message: `Cleared ${removedCount} event listeners`,
+      removedCount
+    }
+  } catch (error) {
+    console.error('Error clearing all event listeners:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+async function getEventListenersHandler() {
+  try {
+    const listeners = Array.from(eventListeners.values()).map(listener => ({
+      id: listener.id,
+      eventType: listener.eventType,
+      target: listener.target,
+      script: listener.script,
+      created: listener.created,
+      active: listener.active
+    }))
+
+    return {
+      success: true,
+      listeners,
+      count: listeners.length
+    }
+  } catch (error) {
+    console.error('Error getting event listeners:', error)
+    return { success: false, error: error.message }
   }
 }
 

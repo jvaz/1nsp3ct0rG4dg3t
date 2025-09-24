@@ -115,9 +115,12 @@
                 <select id="templateCategory" class="template-select" title="Choose Template Category">
                   <option value="">Choose Template...</option>
                   <option value="saved">📚 My Saved Scripts</option>
-                  <option value="injection">🔧 Code Injection</option>
-                  <option value="scraping">📊 Data Scraping</option>
-                  <option value="debugging">🐛 Debugging Tools</option>
+                  <option value="dom">🌳 DOM Manipulation</option>
+                  <option value="data">📊 Data Extraction</option>
+                  <option value="analysis">🔍 Analysis Tools</option>
+                  <option value="injection">💉 Code Injection</option>
+                  <option value="automation">🤖 Automation</option>
+                  <option value="debugging">🐛 Debugging</option>
                 </select>
                 <select id="templateScript" class="template-select" disabled title="Select Specific Template">
                   <option value="">Select Script...</option>
@@ -133,10 +136,33 @@
                   <option value="immediate">Execute Now</option>
                   <option value="onload">Execute on Page Load</option>
                   <option value="persistent">Auto-execute on Tab Switch</option>
+                  <option value="onevent">Execute on Event</option>
                 </select>
+                <div class="event-options" id="eventOptions" style="display: none;">
+                  <select id="eventType" class="event-select" title="Select Event Type">
+                    <option value="click">Click</option>
+                    <option value="scroll">Scroll</option>
+                    <option value="resize">Window Resize</option>
+                    <option value="keydown">Key Press</option>
+                    <option value="focus">Element Focus</option>
+                    <option value="submit">Form Submit</option>
+                    <option value="change">Input Change</option>
+                    <option value="mouseover">Mouse Over</option>
+                    <option value="mouseout">Mouse Out</option>
+                    <option value="load">Page Load Complete</option>
+                  </select>
+                  <select id="eventTarget" class="event-select" title="Select Event Target">
+                    <option value="document">Document</option>
+                    <option value="window">Window</option>
+                    <option value="body">Body</option>
+                    <option value="custom">Custom Selector...</option>
+                  </select>
+                  <input type="text" id="customSelector" class="custom-selector-input" placeholder="CSS selector (e.g., .button, #myid)" style="display: none;" title="Enter CSS selector">
+                </div>
                 <button class="btn btn-primary" id="executeScript">Execute</button>
                 <button class="btn btn-secondary" id="clearConsole">Clear</button>
                 <button class="btn btn-secondary" id="saveScript">Save</button>
+                <button class="btn btn-secondary" id="uploadScript" title="Upload Script File">📁 Upload</button>
               </div>
             </div>
           </div>
@@ -160,6 +186,18 @@
               </div>
               <div class="output-content" id="outputContent">
                 <div class="output-empty">No output yet. Execute some code to see results.</div>
+              </div>
+            </div>
+            <div class="event-management" id="eventManagement" style="display: none;">
+              <div class="event-header">
+                <h3>Active Event Listeners</h3>
+                <div class="event-controls">
+                  <button class="btn btn-tiny" id="clearAllEvents" title="Remove All Event Listeners">🗑️ Clear All</button>
+                  <button class="btn btn-tiny" id="refreshEvents" title="Refresh Event List">🔄 Refresh</button>
+                </div>
+              </div>
+              <div class="event-list" id="eventList">
+                <div class="event-empty">No active event listeners. Set up event-based script execution to see them here.</div>
               </div>
             </div>
           </div>
@@ -244,6 +282,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Hidden file input for script uploads -->
+  <input type="file" id="scriptFileInput" accept=".js,.txt" multiple style="display: none;">
 
   <script src="panel.js"></script>
 </body>
