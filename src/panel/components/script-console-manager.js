@@ -860,41 +860,149 @@ window.errorLog = errors;`
   }
 
   async executeScript() {
-    const code = document.getElementById('codeEditor').value.trim()
-    if (!code) return
+    const executionStart = performance.now()
+    console.log('[CONSOLE-MANAGER] executeScript() called at:', executionStart)
 
+    const code = document.getElementById('codeEditor').value.trim()
     const timing = document.getElementById('executionTiming').value
+
+    console.log('[CONSOLE-MANAGER] Input validation:')
+    console.log('  - code length:', code.length)
+    console.log('  - code preview:', code.substring(0, 100) + (code.length > 100 ? '...' : ''))
+    console.log('  - timing value:', timing)
+
+    if (!code) {
+      console.log('[CONSOLE-MANAGER] No code provided, returning early')
+      this.addOutput('⚠️ No code to execute', TOAST_TYPES.ERROR)
+      return
+    }
 
     try {
       if (timing === EXECUTION_TIMING.IMMEDIATE) {
+        console.log('[CONSOLE-MANAGER] Starting immediate execution path')
+
+        // Show execution start message with script analysis
+        const scriptAnalysis = this.analyzeScript(code)
+        this.addOutput(`▶️ Executing script (${scriptAnalysis.type})...`, TOAST_TYPES.INFO)
+
+        const messageStart = performance.now()
+        console.log('[CONSOLE-MANAGER] Sending executeScript message')
+
         // Execute immediately in current page
         const response = await this.messageHandler.sendMessage('executeScript', { script: code })
 
+        const messageEnd = performance.now()
+        console.log('[CONSOLE-MANAGER] Message response received, took:', messageEnd - messageStart, 'ms')
+
         if (response && response.success) {
+          console.log('[CONSOLE-MANAGER] Execution successful')
           // Store the result for formatting and export
           this.lastScriptResult = response.result
+          this.addOutput(`✅ Execution completed in ${(messageEnd - messageStart).toFixed(1)}ms`, TOAST_TYPES.INFO)
           this.addOutput(response.result)
 
           // Enable export button if there's a result
           const exportBtn = document.getElementById('exportOutput')
           if (exportBtn) exportBtn.disabled = false
         } else {
-          this.addOutput(`Error: ${response.error}`, TOAST_TYPES.ERROR)
+          console.log('[CONSOLE-MANAGER] Execution failed:', response?.error)
+          this.addOutput(`❌ Execution failed: ${response?.error || 'Unknown error'}`, TOAST_TYPES.ERROR)
+
+          // Provide helpful suggestions for common CSP errors
+          if (response?.error?.includes('CSP') || response?.error?.includes('unsafe-eval')) {
+            this.addOutput('💡 Tip: This script may contain complex syntax. Try using simpler expressions or check the console for details.', TOAST_TYPES.INFO)
+          }
         }
       } else if (timing === EXECUTION_TIMING.ON_LOAD) {
-        // Store script to execute on next page load
+        console.log('[CONSOLE-MANAGER] Starting ON_LOAD execution path')
         await this.saveScriptForLater(code, EXECUTION_TIMING.ON_LOAD)
-        this.addOutput('Script saved to execute on next page load', TOAST_TYPES.INFO)
+        this.addOutput('📅 Script saved to execute on next page load', TOAST_TYPES.INFO)
       } else if (timing === EXECUTION_TIMING.PERSISTENT) {
-        // Store script to auto-execute on tab switch
+        console.log('[CONSOLE-MANAGER] Starting PERSISTENT execution path')
         await this.saveScriptForLater(code, EXECUTION_TIMING.PERSISTENT)
-        this.addOutput('Script saved for auto-execution on tab switch', TOAST_TYPES.INFO)
+        this.addOutput('🔄 Script saved for auto-execution on tab switch', TOAST_TYPES.INFO)
       } else if (timing === 'onevent') {
-        // Set up event-based execution
+        console.log('[CONSOLE-MANAGER] Starting event-based execution path')
         await this.setupEventBasedExecution(code)
+      } else {
+        console.log('[CONSOLE-MANAGER] Unknown timing value:', timing)
+        this.addOutput(`⚠️ Unknown execution timing: ${timing}`, TOAST_TYPES.ERROR)
       }
     } catch (error) {
-      this.addOutput(`Error: ${error.message}`, TOAST_TYPES.ERROR)
+      console.error('[CONSOLE-MANAGER] executeScript() caught error:', error)
+      this.addOutput(`💥 Error: ${error.message}`, TOAST_TYPES.ERROR)
+
+      // Provide contextual help for common issues
+      if (error.message.includes('Content script not ready')) {
+        this.addOutput('💡 Try refreshing the page and waiting a moment before executing scripts.', TOAST_TYPES.INFO)
+      } else if (error.message.includes('not supported on this page')) {
+        this.addOutput('💡 Script execution is not available on this page type (chrome://, extensions, etc.).', TOAST_TYPES.INFO)
+      }
+    }
+
+    const executionEnd = performance.now()
+    console.log('[CONSOLE-MANAGER] executeScript() completed in:', executionEnd - executionStart, 'ms')
+  }
+
+  // Analyze script complexity for user feedback (similar to background script)
+  analyzeScript(script) {
+    if (!script || typeof script !== 'string') {
+      return { type: 'invalid' }
+    }
+
+    const trimmedScript = script.trim()
+
+    // Simple expressions that are likely to work well
+    const simplePatterns = [
+      /^document\./,                    // DOM queries
+      /^window\./,                      // Window properties
+      /^location\./,                    // Location properties
+      /^navigator\./,                   // Navigator properties
+      /^console\./,                     // Console operations
+      /^Math\./,                        // Math operations
+      /^\w+\s*\(.*\)$/,                 // Function calls
+      /^[a-zA-Z_$][\w$]*(\.[a-zA-Z_$][\w$]*)*$/,  // Property access
+      /^["'].*["']$/,                   // String literals
+      /^\d+(\.\d+)?$/,                  // Number literals
+      /^(true|false|null|undefined)$/   // Literals
+    ]
+
+    // Complex patterns that require more careful handling
+    const complexPatterns = [
+      /\bfor\s*\(/,                     // for loops
+      /\bwhile\s*\(/,                   // while loops
+      /\bif\s*\(/,                      // if statements
+      /\bfunction\s+/,                  // function declarations
+      /\bclass\s+/,                     // class declarations
+      /\b(var|let|const)\s+/,           // variable declarations
+      /=>/,                             // arrow functions
+      /\{[\s\S]*\}/                     // code blocks
+    ]
+
+    // Check for complex patterns first
+    for (const pattern of complexPatterns) {
+      if (pattern.test(trimmedScript)) {
+        return {
+          type: 'complex',
+          description: 'Complex script with control flow or declarations'
+        }
+      }
+    }
+
+    // Check for simple expressions
+    for (const pattern of simplePatterns) {
+      if (pattern.test(trimmedScript)) {
+        return {
+          type: 'simple',
+          description: 'Simple expression or property access'
+        }
+      }
+    }
+
+    // Default classification
+    return {
+      type: 'standard',
+      description: 'Standard JavaScript code'
     }
   }
 

@@ -326,24 +326,213 @@ async function handleDeleteCookie (request, sender, sendResponse) {
   }
 }
 
-// Script execution
+// Script execution with enhanced CSP-compliant methods
 async function handleExecuteScript (request, sender, sendResponse) {
+  const executionStart = performance.now()
+  console.log('[BACKGROUND] handleExecuteScript() called at:', executionStart)
+
   try {
-    // Forward script execution to content script to avoid CSP issues
+    console.log('[BACKGROUND] Request validation:')
+    console.log('  - script type:', typeof request?.script)
+    console.log('  - script length:', request?.script?.length || 'N/A')
+    console.log('  - script preview:', request?.script?.substring(0, 100) + (request?.script?.length > 100 ? '...' : ''))
+
     const tabId = request.tabId || sender.tab?.id
+    console.log('[BACKGROUND] Resolved tabId:', tabId)
+
     if (!tabId) {
+      console.log('[BACKGROUND] No tab ID available')
       sendResponse({ success: false, error: 'No tab ID provided' })
       return
     }
 
-    const response = await chrome.tabs.sendMessage(tabId, {
+    // Get tab information
+    const tab = await chrome.tabs.get(tabId)
+    if (!tab) {
+      sendResponse({ success: false, error: 'Tab not found' })
+      return
+    }
+
+    console.log('[BACKGROUND] Tab URL:', tab.url)
+
+    // Check if we can use chrome.scripting.executeScript for simple expressions
+    const scriptAnalysis = analyzeScript(request.script)
+    console.log('[BACKGROUND] Script analysis:', scriptAnalysis)
+
+    if (scriptAnalysis.canUseScriptingAPI && isContentScriptSupported(tab.url)) {
+      console.log('[BACKGROUND] Using chrome.scripting.executeScript with function injection')
+      try {
+        const result = await executeWithScriptingAPI(tabId, request.script, scriptAnalysis)
+        console.log('[BACKGROUND] Scripting API execution successful')
+        sendResponse({ success: true, result })
+        return
+      } catch (scriptingError) {
+        console.log('[BACKGROUND] Scripting API failed, falling back to content script:', scriptingError.message)
+        // Fall through to content script method
+      }
+    }
+
+    // Fallback to content script method for complex scripts or when scripting API fails
+    console.log('[BACKGROUND] Using content script method')
+
+    if (!isContentScriptSupported(tab.url)) {
+      sendResponse({
+        success: false,
+        error: 'Script execution not supported on this page type'
+      })
+      return
+    }
+
+    const messagePayload = {
       action: 'executeScript',
       script: request.script
-    })
+    }
+
+    console.log('[BACKGROUND] Sending message to content script')
+    const response = await chrome.tabs.sendMessage(tabId, messagePayload)
+    console.log('[BACKGROUND] Content script response received')
     sendResponse(response)
+
   } catch (error) {
-    sendResponse({ success: false, error: error.message })
+    console.error('[BACKGROUND] handleExecuteScript() caught error:', error)
+    const errorResponse = { success: false, error: error.message }
+    sendResponse(errorResponse)
   }
+
+  const executionEnd = performance.now()
+  console.log('[BACKGROUND] handleExecuteScript() completed in:', executionEnd - executionStart, 'ms')
+}
+
+// Analyze script to determine best execution method
+function analyzeScript(script) {
+  if (!script || typeof script !== 'string') {
+    return { canUseScriptingAPI: false, type: 'invalid' }
+  }
+
+  const trimmedScript = script.trim()
+
+  // Simple expressions that can be wrapped in a function
+  const simpleExpressionPatterns = [
+    /^document\./,                    // DOM queries
+    /^window\./,                      // Window properties
+    /^location\./,                    // Location properties
+    /^navigator\./,                   // Navigator properties
+    /^console\./,                     // Console operations
+    /^Math\./,                        // Math operations
+    /^Date\./,                        // Date operations
+    /^JSON\./,                        // JSON operations
+    /^Array\./,                       // Array operations
+    /^Object\./,                      // Object operations
+    /^String\./,                      // String operations
+    /^Number\./,                      // Number operations
+    /^Boolean\./,                     // Boolean operations
+    /^\w+\s*\(.*\)$/,                 // Function calls
+    /^[a-zA-Z_$][\w$]*(\.[a-zA-Z_$][\w$]*)*$/,  // Property access
+    /^["'].*["']$/,                   // String literals
+    /^\d+(\.\d+)?$/,                  // Number literals
+    /^(true|false)$/,                 // Boolean literals
+    /^null$/,                         // Null literal
+    /^undefined$/                     // Undefined literal
+  ]
+
+  // Complex patterns that need content script injection
+  const complexPatterns = [
+    /\beval\s*\(/,                    // eval() calls
+    /\bnew\s+Function\s*\(/,          // Function constructor
+    /\bsetTimeout\s*\(/,              // setTimeout with code strings
+    /\bsetInterval\s*\(/,             // setInterval with code strings
+    /\bexecScript\s*\(/,              // execScript calls
+    /\bwith\s*\(/,                    // with statements
+    /\breturn\s+/,                    // return statements (need function context)
+    /\bfor\s*\(/,                     // for loops (complex control flow)
+    /\bwhile\s*\(/,                   // while loops
+    /\bif\s*\(/,                      // if statements (may need broader context)
+    /\bfunction\s+/,                  // function declarations
+    /\bclass\s+/,                     // class declarations
+    /\bvar\s+/,                       // variable declarations (scoping issues)
+    /\blet\s+/,                       // let declarations
+    /\bconst\s+/,                     // const declarations
+    /=>/,                             // arrow functions
+    /\{[\s\S]*\}/                     // code blocks
+  ]
+
+  // Check for complex patterns first
+  for (const pattern of complexPatterns) {
+    if (pattern.test(trimmedScript)) {
+      return {
+        canUseScriptingAPI: false,
+        type: 'complex',
+        reason: 'Contains complex syntax requiring content script injection'
+      }
+    }
+  }
+
+  // Check for simple expressions
+  for (const pattern of simpleExpressionPatterns) {
+    if (pattern.test(trimmedScript)) {
+      return {
+        canUseScriptingAPI: true,
+        type: 'simple',
+        reason: 'Simple expression suitable for function injection'
+      }
+    }
+  }
+
+  // Default to complex for safety
+  return {
+    canUseScriptingAPI: false,
+    type: 'unknown',
+    reason: 'Unknown pattern, using content script for safety'
+  }
+}
+
+// Execute script using chrome.scripting.executeScript with function injection
+async function executeWithScriptingAPI(tabId, script, analysis) {
+  console.log('[BACKGROUND] Executing with chrome.scripting.executeScript')
+
+  // Create a function that returns the result of the script
+  // This function runs in the page context where eval() is allowed
+  const scriptFunction = (userScript) => {
+    try {
+      // Execute the script and return the result
+      // This eval() runs in the page context, not the extension context
+      return eval(userScript)
+    } catch (error) {
+      throw new Error(error.message)
+    }
+  }
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    func: scriptFunction,
+    args: [script]
+  })
+
+  if (!results || results.length === 0) {
+    throw new Error('No results returned from script execution')
+  }
+
+  const result = results[0].result
+
+  // Serialize the result similar to content script method
+  let serializedResult
+  if (result === undefined) {
+    serializedResult = 'undefined'
+  } else if (result === null) {
+    serializedResult = 'null'
+  } else if (typeof result === 'function') {
+    serializedResult = result.toString()
+  } else if (typeof result === 'object') {
+    try {
+      serializedResult = JSON.stringify(result, null, 2)
+    } catch (jsonError) {
+      serializedResult = result.toString()
+    }
+  } else {
+    serializedResult = String(result)
+  }
+
+  return serializedResult
 }
 
 // Tab information

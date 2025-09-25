@@ -161,80 +161,153 @@ function getStorageObject (storageType) {
   }
 }
 
-// Script execution
+// Script execution - fixed to avoid CSP unsafe-eval violations
 async function executeScript (script) {
+  const executionStart = performance.now()
+  console.log('[CONTENT-SCRIPT] executeScript() called at:', executionStart)
+
   try {
+    console.log('[CONTENT-SCRIPT] Input validation:')
+    console.log('  - script type:', typeof script)
+    console.log('  - script length:', script?.length || 'N/A')
+    console.log('  - script preview:', script?.substring(0, 100) + (script?.length > 100 ? '...' : ''))
+
     // Create a unique identifier for this execution
-    const executionId = 'inspector_exec_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11)
+    const timestamp = Date.now()
+    const randomPart = Math.random().toString(36).substring(2, 11)
+    const executionId = 'inspector_exec_' + timestamp + '_' + randomPart
 
-    // Create a script element to execute in the page context (bypasses CSP)
+    console.log('[CONTENT-SCRIPT] Using script element injection to bypass CSP')
+
+    // Create a script element to execute in the page context (bypasses CSP completely)
     const scriptElement = document.createElement('script')
+    scriptElement.type = 'text/javascript'
 
-    // Wrap the script to capture result and handle errors
-    const wrappedScript =
-      '(function() {' +
-        'try {' +
-          'window.' + executionId + '_result = undefined;' +
-          'window.' + executionId + '_error = undefined;' +
-          'const result = (function() {' +
-            script +
-          '})();' +
-          'window.' + executionId + '_result = result;' +
-          'window.' + executionId + '_complete = true;' +
-        '} catch (error) {' +
-          'window.' + executionId + '_error = error.message;' +
-          'window.' + executionId + '_complete = true;' +
-        '}' +
-      '})();'
+    // Wrap the script to capture result and handle errors in page context
+    // This approach avoids eval() and executes in the main world context
+    const wrappedScript = `
+(function() {
+  try {
+    console.log("[INJECTED-SCRIPT] Starting execution in page context");
+    window.${executionId}_result = undefined;
+    window.${executionId}_error = undefined;
 
+    // Execute the user script and capture the result
+    const result = (function() {
+      ${script}
+    })();
+
+    console.log("[INJECTED-SCRIPT] Script executed, result:", result);
+    window.${executionId}_result = result;
+    window.${executionId}_complete = true;
+    console.log("[INJECTED-SCRIPT] Execution completed successfully");
+  } catch (error) {
+    console.error("[INJECTED-SCRIPT] Execution error:", error);
+    window.${executionId}_error = error.message;
+    window.${executionId}_complete = true;
+  }
+})();`
+
+    console.log('[CONTENT-SCRIPT] Wrapped script prepared for injection')
+
+    const injectStart = performance.now()
+
+    // Set the script content and inject it
     scriptElement.textContent = wrappedScript
 
-    // Inject the script
-    (document.head || document.documentElement).appendChild(scriptElement)
+    // Inject into page
+    const targetElement = document.head || document.documentElement
+    targetElement.appendChild(scriptElement)
 
-    // Wait for execution to complete
+    console.log('[CONTENT-SCRIPT] Script element injected into page')
+
+    const injectEnd = performance.now()
+    console.log('[CONTENT-SCRIPT] Script injection completed at:', injectEnd, 'injection time:', injectEnd - injectStart, 'ms')
+
+    // Wait for execution to complete with polling
     let attempts = 0
     const maxAttempts = 100 // 1 second timeout
+    const pollingStart = performance.now()
+
+    console.log('[CONTENT-SCRIPT] Starting polling for completion')
     while (!window[executionId + '_complete'] && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 10))
       attempts++
     }
 
-    // Get the results
+    const pollingEnd = performance.now()
+    console.log('[CONTENT-SCRIPT] Polling completed at:', pollingEnd, 'polling time:', pollingEnd - pollingStart, 'ms')
+
+    // Get the results from the page context
     const result = window[executionId + '_result']
     const error = window[executionId + '_error']
 
+    console.log('[CONTENT-SCRIPT] Execution results:')
+    console.log('  - result type:', typeof result)
+    console.log('  - result value:', result)
+    console.log('  - error type:', typeof error)
+    console.log('  - error value:', error)
+
     // Clean up
+    console.log('[CONTENT-SCRIPT] Starting cleanup')
     scriptElement.remove()
     delete window[executionId + '_result']
     delete window[executionId + '_error']
     delete window[executionId + '_complete']
+    console.log('[CONTENT-SCRIPT] Cleanup completed')
 
     if (error) {
+      console.log('[CONTENT-SCRIPT] Returning error response:', error)
       return { success: false, error }
+    }
+
+    if (attempts >= maxAttempts) {
+      console.log('[CONTENT-SCRIPT] Execution timed out')
+      return { success: false, error: 'Script execution timed out' }
     }
 
     // Handle different result types
     let serializedResult
+    console.log('[CONTENT-SCRIPT] Serializing result...')
+
     if (result === undefined) {
       serializedResult = 'undefined'
+      console.log('[CONTENT-SCRIPT] Result is undefined')
     } else if (result === null) {
       serializedResult = 'null'
+      console.log('[CONTENT-SCRIPT] Result is null')
     } else if (typeof result === 'function') {
       serializedResult = result.toString()
+      console.log('[CONTENT-SCRIPT] Result is function, serialized length:', serializedResult.length)
     } else if (typeof result === 'object') {
       try {
         serializedResult = JSON.stringify(result, null, 2)
-      } catch {
+        console.log('[CONTENT-SCRIPT] Result is object, JSON serialized length:', serializedResult.length)
+      } catch (jsonError) {
+        console.log('[CONTENT-SCRIPT] JSON serialization failed:', jsonError.message)
         serializedResult = result.toString()
+        console.log('[CONTENT-SCRIPT] Used toString() instead, length:', serializedResult.length)
       }
     } else {
       serializedResult = String(result)
+      console.log('[CONTENT-SCRIPT] Result converted to string, length:', serializedResult.length)
     }
 
-    return { success: true, result: serializedResult }
+    const successResponse = { success: true, result: serializedResult }
+    console.log('[CONTENT-SCRIPT] Returning success response')
+    return successResponse
   } catch (error) {
-    return { success: false, error: error.message }
+    console.error('[CONTENT-SCRIPT] executeScript() caught error:', error)
+    console.error('[CONTENT-SCRIPT] Error stack:', error.stack)
+    console.error('[CONTENT-SCRIPT] Error name:', error.name)
+    console.error('[CONTENT-SCRIPT] Error message:', error.message)
+
+    const errorResponse = { success: false, error: error.message }
+    console.log('[CONTENT-SCRIPT] Returning error response:', errorResponse)
+    return errorResponse
+  } finally {
+    const executionEnd = performance.now()
+    console.log('[CONTENT-SCRIPT] executeScript() completed at:', executionEnd, 'total time:', executionEnd - executionStart, 'ms')
   }
 }
 
