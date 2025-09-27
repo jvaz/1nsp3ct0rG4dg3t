@@ -29,7 +29,6 @@
       <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
       <button class="tab-btn" data-tab="storage">Storage</button>
       <button class="tab-btn" data-tab="cookies">Cookies</button>
-      <button class="tab-btn" data-tab="console">Console</button>
     </nav>
 
     <!-- Main Content Area -->
@@ -48,6 +47,19 @@
                 <option value="custom">Custom Order</option>
               </select>
               <button class="btn btn-secondary" id="refreshDashboard" title="Refresh Values">↻</button>
+            </div>
+          </div>
+          <div class="search-box">
+            <input type="text" id="dashboardSearch" placeholder="Search all storage & cookies...">
+            <button class="search-clear-btn" id="dashboardSearchClear" title="Clear search">×</button>
+          </div>
+          <div class="search-results-container" id="searchResults" style="display: none;">
+            <div class="search-results-header">
+              <h3 id="searchResultsTitle">Search Results</h3>
+              <p id="searchResultsCount" class="search-results-count">0 items found</p>
+            </div>
+            <div class="search-results-list" id="searchResultsList">
+              <!-- Search results will be populated here -->
             </div>
           </div>
           <div class="pinned-properties" id="pinnedProperties">
@@ -75,11 +87,26 @@
           <div class="storage-content">
             <div class="search-box">
               <input type="text" id="storageSearch" placeholder="Search keys or values...">
+              <button class="search-clear-btn" id="storageSearchClear" title="Clear search">×</button>
             </div>
             <div class="storage-items" id="storageItems">
               <div class="loading">Loading storage data...</div>
             </div>
           </div>
+          <!-- Status Bar -->
+          <footer class="status-bar">
+            <div class="status-info">
+              <span id="connectionStatus">Connected</span>
+              <span class="separator">•</span>
+              <span id="pageUrl">Loading...</span>
+            </div>
+            <div class="status-actions">
+              <a href="https://jvaz.github.io/" target="_blank" class="footer-link" title="Personal Website">João Vaz</a>
+              <a href="https://github.com/jvaz/1nsp3ct0rG4dg3t" target="_blank" class="footer-link" title="GitHub Repository">GitHub</a>
+              <a href="https://www.buymeacoffee.com/jvaz" target="_blank" class="footer-link coffee-link" title="Buy me a coffee">☕ Buy me a coffee</a>
+              <button class="status-btn" id="aboutBtn" title="About">About</button>
+            </div>
+          </footer>
         </div>
       </div>
 
@@ -96,113 +123,30 @@
           <div class="cookies-content">
             <div class="search-box">
               <input type="text" id="cookieSearch" placeholder="Search cookies...">
+              <button class="search-clear-btn" id="cookieSearchClear" title="Clear search">×</button>
             </div>
             <div class="cookies-list" id="cookiesList">
               <div class="loading">Loading cookies...</div>
             </div>
           </div>
+          <!-- Status Bar -->
+          <footer class="status-bar">
+            <div class="status-info">
+              <span id="connectionStatus">Connected</span>
+              <span class="separator">•</span>
+              <span id="pageUrl">Loading...</span>
+            </div>
+            <div class="status-actions">
+              <a href="https://jvaz.github.io/" target="_blank" class="footer-link" title="Personal Website">João Vaz</a>
+              <a href="https://github.com/jvaz/1nsp3ct0rG4dg3t" target="_blank" class="footer-link" title="GitHub Repository">GitHub</a>
+              <a href="https://www.buymeacoffee.com/jvaz" target="_blank" class="footer-link coffee-link" title="Buy me a coffee">☕ Buy me a coffee</a>
+              <button class="status-btn" id="aboutBtn" title="About">About</button>
+            </div>
+          </footer>
         </div>
       </div>
 
 
-      <!-- Console Tab -->
-      <div class="tab-content" id="console">
-        <div class="console-container">
-          <div class="console-header">
-            <h2>JavaScript Console</h2>
-            <div class="console-controls">
-              <div class="template-selector">
-                <select id="templateCategory" class="template-select" title="Choose Template Category">
-                  <option value="">Choose Template...</option>
-                  <option value="saved">📚 My Saved Scripts</option>
-                  <option value="dom">🌳 DOM Manipulation</option>
-                  <option value="data">📊 Data Extraction</option>
-                  <option value="analysis">🔍 Analysis Tools</option>
-                  <option value="injection">💉 Code Injection</option>
-                  <option value="automation">🤖 Automation</option>
-                  <option value="debugging">🐛 Debugging</option>
-                </select>
-                <select id="templateScript" class="template-select" disabled title="Select Specific Template">
-                  <option value="">Select Script...</option>
-                </select>
-                <button class="btn btn-small" id="loadTemplate" disabled title="Load Selected Template">Load</button>
-              </div>
-              <div class="element-tools">
-                <button class="btn btn-primary" id="selectElement" title="Pick Element on Page">📌 Pick Element</button>
-                <button class="btn btn-secondary" id="inspectMode" title="Toggle Inspector Mode" disabled>🔍 Inspector</button>
-              </div>
-              <div class="execution-controls">
-                <select id="executionTiming" class="execution-timing" title="When to execute script">
-                  <option value="immediate">Execute Now</option>
-                  <option value="onload">Execute on Page Load</option>
-                  <option value="persistent">Auto-execute on Tab Switch</option>
-                  <option value="onevent">Execute on Event</option>
-                </select>
-                <div class="event-options" id="eventOptions" style="display: none;">
-                  <select id="eventType" class="event-select" title="Select Event Type">
-                    <option value="click">Click</option>
-                    <option value="scroll">Scroll</option>
-                    <option value="resize">Window Resize</option>
-                    <option value="keydown">Key Press</option>
-                    <option value="focus">Element Focus</option>
-                    <option value="submit">Form Submit</option>
-                    <option value="change">Input Change</option>
-                    <option value="mouseover">Mouse Over</option>
-                    <option value="mouseout">Mouse Out</option>
-                    <option value="load">Page Load Complete</option>
-                  </select>
-                  <select id="eventTarget" class="event-select" title="Select Event Target">
-                    <option value="document">Document</option>
-                    <option value="window">Window</option>
-                    <option value="body">Body</option>
-                    <option value="custom">Custom Selector...</option>
-                  </select>
-                  <input type="text" id="customSelector" class="custom-selector-input" placeholder="CSS selector (e.g., .button, #myid)" style="display: none;" title="Enter CSS selector">
-                </div>
-                <button class="btn btn-primary" id="executeScript">Execute</button>
-                <button class="btn btn-secondary" id="clearConsole">Clear</button>
-                <button class="btn btn-secondary" id="saveScript">Save</button>
-                <button class="btn btn-secondary" id="uploadScript" title="Upload Script File">📁 Upload</button>
-              </div>
-            </div>
-          </div>
-          <div class="console-content">
-            <div class="code-editor">
-              <textarea id="codeEditor" placeholder="Enter JavaScript code here..."></textarea>
-            </div>
-            <div class="console-output">
-              <div class="output-header">
-                <span class="output-title">Output:</span>
-                <div class="output-controls">
-                  <select id="outputFormat" class="output-select" title="Output Format">
-                    <option value="text">📄 Text</option>
-                    <option value="json">🌳 JSON Tree</option>
-                    <option value="table">📊 Table</option>
-                    <option value="html">🌐 HTML Preview</option>
-                  </select>
-                  <button class="btn btn-tiny" id="exportOutput" title="Export Output Data" disabled>📤 Export</button>
-                  <button class="btn btn-tiny" id="clearOutput" title="Clear Output">🗑️ Clear</button>
-                </div>
-              </div>
-              <div class="output-content" id="outputContent">
-                <div class="output-empty">No output yet. Execute some code to see results.</div>
-              </div>
-            </div>
-            <div class="event-management" id="eventManagement" style="display: none;">
-              <div class="event-header">
-                <h3>Active Event Listeners</h3>
-                <div class="event-controls">
-                  <button class="btn btn-tiny" id="clearAllEvents" title="Remove All Event Listeners">🗑️ Clear All</button>
-                  <button class="btn btn-tiny" id="refreshEvents" title="Refresh Event List">🔄 Refresh</button>
-                </div>
-              </div>
-              <div class="event-list" id="eventList">
-                <div class="event-empty">No active event listeners. Set up event-based script execution to see them here.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </main>
 
     <!-- Status Bar -->
@@ -213,8 +157,10 @@
         <span id="pageUrl">Loading...</span>
       </div>
       <div class="status-actions">
-        <button class="status-btn" id="exportData" title="Export Data">Export</button>
-        <button class="status-btn" id="helpBtn" title="Help">Help</button>
+        <a href="https://jvaz.github.io/" target="_blank" class="footer-link" title="Personal Website">João Vaz</a>
+        <a href="https://github.com/jvaz/1nsp3ct0rG4dg3t" target="_blank" class="footer-link" title="GitHub Repository">GitHub</a>
+        <a href="https://www.buymeacoffee.com/jvaz" target="_blank" class="footer-link coffee-link" title="Buy me a coffee">☕ Buy me a coffee</a>
+        <button class="status-btn" id="aboutBtn" title="About">About</button>
       </div>
     </footer>
   </div>

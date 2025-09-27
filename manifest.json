@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "1nsp3ct0rG4dg3t",
   "version": "1.0.0",
-  "description": "Advanced web debugging tool for storage management, application inspection, and JavaScript injection",
+  "description": "helps you view, pin, and explore storage values and cookies at a glance",
   "author": "1nsp3ct0rG4dg3t Team",
 
   "permissions": [

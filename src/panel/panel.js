@@ -7,7 +7,6 @@ import { ModalManager } from './components/modal-manager.js'
 import { StorageManager } from './components/storage-manager.js'
 import { CookieManager } from './components/cookie-manager.js'
 import { DashboardManager } from './components/dashboard-manager.js'
-import { ScriptConsoleManager } from './components/script-console-manager.js'
 import { getDomainFromTab } from './utils/url-helpers.js'
 
 class Inspector {
@@ -26,7 +25,6 @@ class Inspector {
     this.storageManager = new StorageManager(this.messageHandler, this.modalManager, this)
     this.cookieManager = new CookieManager(this.messageHandler, this.modalManager, this)
     this.dashboardManager = new DashboardManager(this.messageHandler, this.modalManager, this.storageManager, this.cookieManager, this)
-    this.scriptConsoleManager = new ScriptConsoleManager(this.messageHandler, this.modalManager)
 
     // Set cross-references between components
     this.cookieManager.setDashboardManager(this.dashboardManager)
@@ -43,6 +41,7 @@ class Inspector {
     this.tabInfo = await this.messageHandler.getCurrentTab()
     this.storageManager.setTabInfo(this.tabInfo)
     this.cookieManager.setTabInfo(this.tabInfo)
+    this.dashboardManager.setTabInfo(this.tabInfo)
     this.setupTabChangeListener()
 
     // Load data for the currently active tab (non-blocking)
@@ -64,9 +63,6 @@ class Inspector {
         break
       case TABS.COOKIES:
         this.cookieManager.loadCookies()
-        break
-      case TABS.CONSOLE:
-        this.scriptConsoleManager.executePersistentScript()
         break
       default:
         // Default to dashboard if unknown tab
@@ -146,54 +142,6 @@ class Inspector {
       this.cookieManager.loadCookies()
     })
 
-    // Console actions
-    document.getElementById('executeScript').addEventListener('click', () => {
-      this.scriptConsoleManager.executeScript()
-    })
-
-    document.getElementById('clearConsole').addEventListener('click', () => {
-      this.scriptConsoleManager.clearConsole()
-    })
-
-    document.getElementById('saveScript').addEventListener('click', () => {
-      this.scriptConsoleManager.saveScript()
-    })
-
-    // DOM selection tools
-    document.getElementById('selectElement').addEventListener('click', () => {
-      this.activateElementPicker()
-    })
-
-    document.getElementById('inspectMode').addEventListener('click', () => {
-      this.toggleInspectorMode()
-    })
-
-    // Template selector actions
-    document.getElementById('templateCategory').addEventListener('change', (e) => {
-      this.scriptConsoleManager.handleTemplateCategoryChange(e.target.value)
-    })
-
-    document.getElementById('templateScript').addEventListener('change', (e) => {
-      this.scriptConsoleManager.handleTemplateScriptChange(e.target.value)
-    })
-
-    document.getElementById('loadTemplate').addEventListener('click', () => {
-      this.scriptConsoleManager.loadSelectedTemplate()
-    })
-
-    // Output formatting and export actions
-    document.getElementById('outputFormat').addEventListener('change', (e) => {
-      this.scriptConsoleManager.handleOutputFormatChange(e.target.value)
-    })
-
-    document.getElementById('exportOutput').addEventListener('click', () => {
-      this.scriptConsoleManager.exportOutputData()
-    })
-
-    document.getElementById('clearOutput').addEventListener('click', () => {
-      this.scriptConsoleManager.clearConsole()
-    })
-
 
     // Search functionality
     document.getElementById('storageSearch').addEventListener('input', (e) => {
@@ -205,13 +153,83 @@ class Inspector {
     })
 
     // Status bar actions
-    document.getElementById('exportData').addEventListener('click', () => {
-      this.exportData()
+
+    document.getElementById('aboutBtn').addEventListener('click', () => {
+      this.showAbout()
     })
 
-    document.getElementById('helpBtn').addEventListener('click', () => {
-      this.showHelp()
+    // Dashboard search functionality
+    const dashboardSearch = document.getElementById('dashboardSearch')
+    const dashboardSearchClear = document.getElementById('dashboardSearchClear')
+
+    dashboardSearch.addEventListener('input', (e) => {
+      this.dashboardManager.searchAllData(e.target.value)
     })
+
+    // Escape key to clear search
+    dashboardSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.clearDashboardSearch()
+      }
+    })
+
+    // Clear button functionality
+    dashboardSearchClear.addEventListener('click', () => {
+      this.clearDashboardSearch()
+    })
+
+    // Storage search functionality
+    const storageSearch = document.getElementById('storageSearch')
+    const storageSearchClear = document.getElementById('storageSearchClear')
+
+    // Escape key to clear storage search
+    storageSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.clearStorageSearch()
+      }
+    })
+
+    // Clear button for storage search
+    storageSearchClear.addEventListener('click', () => {
+      this.clearStorageSearch()
+    })
+
+    // Cookie search functionality
+    const cookieSearch = document.getElementById('cookieSearch')
+    const cookieSearchClear = document.getElementById('cookieSearchClear')
+
+    // Escape key to clear cookie search
+    cookieSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.clearCookieSearch()
+      }
+    })
+
+    // Clear button for cookie search
+    cookieSearchClear.addEventListener('click', () => {
+      this.clearCookieSearch()
+    })
+  }
+
+  clearDashboardSearch() {
+    const searchInput = document.getElementById('dashboardSearch')
+    searchInput.value = ''
+    this.dashboardManager.hideSearchResults()
+    searchInput.focus()
+  }
+
+  clearStorageSearch() {
+    const searchInput = document.getElementById('storageSearch')
+    searchInput.value = ''
+    searchInput.dispatchEvent(new Event('input'))
+    searchInput.focus()
+  }
+
+  clearCookieSearch() {
+    const searchInput = document.getElementById('cookieSearch')
+    searchInput.value = ''
+    searchInput.dispatchEvent(new Event('input'))
+    searchInput.focus()
   }
 
   setupTheme () {
@@ -273,9 +291,6 @@ class Inspector {
         break
       case TABS.COOKIES:
         this.cookieManager.loadCookies()
-        break
-      case TABS.CONSOLE:
-        this.scriptConsoleManager.executePersistentScript()
         break
     }
 
@@ -490,25 +505,37 @@ class Inspector {
     ])
   }
 
-  exportData () {
-    // TODO: Implement data export functionality
-    console.log('Exporting data...')
-  }
 
-  showHelp () {
-    const helpContent = `
-      <h4>1nsp3ct0rG4dg3t Help</h4>
-      <p>Welcome to 1nsp3ct0rG4dg3t! This extension helps you debug web pages by providing access to:</p>
-      <ul>
-        <li><strong>Dashboard:</strong> Pin frequently used storage values</li>
-        <li><strong>Storage:</strong> View and edit localStorage and sessionStorage</li>
-        <li><strong>Cookies:</strong> Manage cookies for the current domain</li>
-        <li><strong>App Info:</strong> View page and application information</li>
-        <li><strong>Console:</strong> Execute JavaScript in the page context</li>
-      </ul>
-      <p>Use the theme toggle to switch between light and dark modes.</p>
+  showAbout () {
+    const aboutContent = `
+      <div class="about-modal">
+        <div class="about-header">
+          <h2>🔍 1nsp3ct0rG4dg3t</h2>
+          <p class="about-subtitle">helps you view, pin, and explore storage values and cookies at a glance</p>
+        </div>
+
+        <div class="about-section">
+          <h3>📊 Features</h3>
+          <ul class="about-features">
+            <li><strong>Dashboard:</strong> Pin important values for quick access</li>
+            <li><strong>Storage:</strong> View and edit localStorage & sessionStorage</li>
+            <li><strong>Cookies:</strong> Manage cookies with security insights</li>
+            <li><strong>Search:</strong> Find any storage item across all types</li>
+            <li><strong>JSON Viewer:</strong> Pretty-print and explore JSON data</li>
+          </ul>
+        </div>
+
+        <div class="about-section">
+          <h3>👨‍💻 Created By</h3>
+          <p><strong>João Vaz</strong></p>
+          <p class="about-note">Links available in the footer below.</p>
+        </div>
+      </div>
     `
-    this.modalManager.showModal('Help', helpContent)
+    this.modalManager.showModal('About - 1nsp3ct0rG4dg3t', aboutContent, null, {
+      hideConfirm: true,
+      cancelText: 'Close'
+    })
   }
 
   updateStatusBar () {
@@ -541,6 +568,7 @@ class Inspector {
       this.tabInfo = await this.messageHandler.getCurrentTab()
     this.storageManager.setTabInfo(this.tabInfo)
     this.cookieManager.setTabInfo(this.tabInfo)
+    this.dashboardManager.setTabInfo(this.tabInfo)
       console.log('ensureTabInfo: After getCurrentTab, tabInfo:', this.tabInfo)
     }
     return this.tabInfo
@@ -925,229 +953,6 @@ class Inspector {
 
 
 
-  handleOutputFormatChange(format) {
-    // Delegate to ScriptConsoleManager
-    this.scriptConsoleManager.handleOutputFormatChange(format)
-  }
-
-
-  // DOM Selection Tools Methods
-  async activateElementPicker() {
-    try {
-      const selectBtn = document.getElementById('selectElement')
-
-      if (selectBtn.classList.contains('active')) {
-        // Deactivate if already active
-        await this.deactivateElementPicker()
-        return
-      }
-
-      // Check if we can inject into the current tab
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
-      if (!tabs[0]) {
-        showToast('No active tab found', 'error')
-        return
-      }
-
-      const tab = tabs[0]
-      if (!this.canInjectIntoUrl(tab.url)) {
-        showToast('Cannot pick elements on this page type', 'warning')
-        return
-      }
-
-      // Activate picker mode UI first
-      selectBtn.classList.add('active')
-      selectBtn.textContent = '⏹️ Stop Picking'
-      selectBtn.title = 'Stop Element Picker'
-
-      try {
-        // Inject element picker script into page
-        const response = await this.messageHandler.sendMessage('injectElementPicker', { activate: true })
-
-        if (!response || !response.success) {
-          throw new Error(response?.error || 'Failed to activate element picker')
-        }
-
-        // Set up message listener for element selection
-        this.setupElementSelectionListener()
-
-        showToast('Element picker activated. Click on any element on the page, or press Escape to cancel.', TOAST_TYPES.INFO)
-
-      } catch (injectionError) {
-        // Reset button state on injection failure
-        selectBtn.classList.remove('active')
-        selectBtn.textContent = '📌 Pick Element'
-        selectBtn.title = 'Pick Element on Page'
-
-        throw injectionError
-      }
-
-    } catch (error) {
-      console.error('Error activating element picker:', error)
-      showToast(`Error: ${error.message}`, 'error')
-    }
-  }
-
-  async deactivateElementPicker() {
-    try {
-      const selectBtn = document.getElementById('selectElement')
-
-      // Reset button state
-      selectBtn.classList.remove('active')
-      selectBtn.textContent = '📌 Pick Element'
-      selectBtn.title = 'Pick Element on Page'
-
-      // Deactivate picker in page
-      await this.messageHandler.sendMessage('injectElementPicker', { activate: false })
-
-      // Remove message listener
-      this.removeElementSelectionListener()
-
-      showToast('Element picker deactivated', TOAST_TYPES.INFO)
-
-    } catch (error) {
-      console.error('Error deactivating element picker:', error)
-    }
-  }
-
-  setupElementSelectionListener() {
-    if (this.elementSelectionListener) {
-      this.removeElementSelectionListener()
-    }
-
-    this.elementSelectionListener = (message) => {
-      if (message.type === 'ELEMENT_SELECTED') {
-        this.handleElementSelected(message.data)
-      } else if (message.type === 'ELEMENT_PICKER_CANCELLED') {
-        this.deactivateElementPicker()
-      }
-    }
-
-    chrome.runtime.onMessage.addListener(this.elementSelectionListener)
-  }
-
-  removeElementSelectionListener() {
-    if (this.elementSelectionListener) {
-      chrome.runtime.onMessage.removeListener(this.elementSelectionListener)
-      this.elementSelectionListener = null
-    }
-  }
-
-  async handleElementSelected(elementData) {
-    try {
-      // Deactivate picker first
-      await this.deactivateElementPicker()
-
-      // Insert selector into code editor
-      const codeEditor = document.getElementById('codeEditor')
-      const currentCode = codeEditor.value
-      const cursorPos = codeEditor.selectionStart
-
-      // Insert selector at cursor position
-      const selectorCode = `document.querySelector('${elementData.cssSelector}')`
-      const newCode = currentCode.slice(0, cursorPos) + selectorCode + currentCode.slice(cursorPos)
-
-      codeEditor.value = newCode
-      codeEditor.focus()
-
-      // Position cursor after inserted text
-      const newCursorPos = cursorPos + selectorCode.length
-      codeEditor.setSelectionRange(newCursorPos, newCursorPos)
-
-      // Show element info
-      this.showElementInfo(elementData)
-
-    } catch (error) {
-      console.error('Error handling selected element:', error)
-      showToast(`Error: ${error.message}`, 'error')
-    }
-  }
-
-  showElementInfo(elementData) {
-    const { tagName, cssSelector, xpath, textContent, elementInfo } = elementData
-
-    const infoHtml = `
-      <div class="element-info">
-        <h4>Selected Element</h4>
-        <div class="element-details">
-          <div class="detail-row">
-            <strong>Tag:</strong> &lt;${tagName.toLowerCase()}&gt;
-          </div>
-          <div class="detail-row">
-            <strong>CSS Selector:</strong>
-            <code class="selector-code">${escapeHtml(cssSelector)}</code>
-          </div>
-          ${xpath ? `
-          <div class="detail-row">
-            <strong>XPath:</strong>
-            <code class="selector-code">${escapeHtml(xpath)}</code>
-          </div>
-          ` : ''}
-          ${textContent ? `
-          <div class="detail-row">
-            <strong>Text:</strong>
-            <span class="element-text">${escapeHtml(textContent.substring(0, 100))}${textContent.length > 100 ? '...' : ''}</span>
-          </div>
-          ` : ''}
-          ${elementInfo ? `
-          <div class="detail-row">
-            <strong>Attributes:</strong>
-            <span class="element-attrs">${escapeHtml(elementInfo)}</span>
-          </div>
-          ` : ''}
-        </div>
-        <div class="element-actions">
-          <button class="btn btn-small" onclick="navigator.clipboard.writeText('${cssSelector.replace(/'/g, "\\'")}')">📋 Copy CSS</button>
-          ${xpath ? `<button class="btn btn-small" onclick="navigator.clipboard.writeText('${xpath.replace(/'/g, "\\'")}')">📋 Copy XPath</button>` : ''}
-        </div>
-      </div>
-    `
-
-    this.modalManager.showModal('Element Selected', infoHtml, null, {
-      hideConfirm: true,
-      cancelText: 'Close'
-    })
-  }
-
-  toggleInspectorMode() {
-    const inspectBtn = document.getElementById('inspectMode')
-
-    if (inspectBtn.classList.contains('active')) {
-      // Deactivate inspector mode
-      inspectBtn.classList.remove('active')
-      inspectBtn.textContent = '🔍 Inspector'
-      inspectBtn.title = 'Toggle Inspector Mode'
-      showToast('Inspector mode deactivated', TOAST_TYPES.INFO)
-    } else {
-      // Activate inspector mode
-      inspectBtn.classList.add('active')
-      inspectBtn.textContent = '🔍 Stop'
-      inspectBtn.title = 'Stop Inspector Mode'
-      showToast('Inspector mode activated (experimental)', TOAST_TYPES.INFO)
-    }
-  }
-
-  canInjectIntoUrl(url) {
-    if (!url) return false
-
-    // Check for restricted URLs
-    const restrictedProtocols = ['chrome:', 'chrome-extension:', 'moz-extension:', 'edge:', 'about:']
-    const restrictedDomains = ['chrome.google.com']
-
-    for (const protocol of restrictedProtocols) {
-      if (url.startsWith(protocol)) {
-        return false
-      }
-    }
-
-    for (const domain of restrictedDomains) {
-      if (url.includes(domain)) {
-        return false
-      }
-    }
-
-    return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file://')
-  }
 }
 
 // Global error handler for context invalidation
