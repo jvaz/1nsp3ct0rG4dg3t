@@ -1,0 +1,148 @@
+{
+  "testSites": {
+    "static": {
+      "name": "Static HTML Test Page",
+      "url": "https://httpbin.org/html",
+      "description": "Simple static HTML page for basic testing",
+      "expectedStorage": {
+        "localStorage": {},
+        "sessionStorage": {}
+      },
+      "expectedCookies": [],
+      "features": ["basic-html", "no-js-framework"]
+    },
+    "github": {
+      "name": "GitHub",
+      "url": "https://github.com",
+      "description": "GitHub main page for testing with real web application",
+      "expectedStorage": {
+        "localStorage": ["preferred_color_mode", "tz"],
+        "sessionStorage": ["__Host-user_session_same_site"]
+      },
+      "expectedCookies": ["_gh_sess", "logged_in", "tz"],
+      "features": ["spa", "github-api", "authentication"]
+    },
+    "httpbin": {
+      "name": "HTTPBin",
+      "url": "https://httpbin.org",
+      "description": "HTTP testing service for cookie and header testing",
+      "expectedStorage": {
+        "localStorage": {},
+        "sessionStorage": {}
+      },
+      "expectedCookies": [],
+      "features": ["http-testing", "cookie-testing"]
+    },
+    "jsonplaceholder": {
+      "name": "JSONPlaceholder",
+      "url": "https://jsonplaceholder.typicode.com",
+      "description": "Fake REST API for testing",
+      "expectedStorage": {
+        "localStorage": {},
+        "sessionStorage": {}
+      },
+      "expectedCookies": [],
+      "features": ["api-testing", "json-data"]
+    },
+    "example": {
+      "name": "Example Domain",
+      "url": "https://example.com",
+      "description": "Simple example domain for basic testing",
+      "expectedStorage": {
+        "localStorage": {},
+        "sessionStorage": {}
+      },
+      "expectedCookies": [],
+      "features": ["basic-html", "minimal"]
+    }
+  },
+  "testScenarios": {
+    "basic": {
+      "name": "Basic Functionality Test",
+      "sites": ["static", "example"],
+      "description": "Test basic extension functionality on simple sites"
+    },
+    "realWorld": {
+      "name": "Real World Application Test",
+      "sites": ["github"],
+      "description": "Test extension with real web applications"
+    },
+    "cookieTesting": {
+      "name": "Cookie Management Test",
+      "sites": ["httpbin"],
+      "description": "Test cookie operations and management"
+    },
+    "crossSite": {
+      "name": "Cross-Site Compatibility",
+      "sites": ["static", "github", "httpbin", "example"],
+      "description": "Test extension across different types of websites"
+    }
+  },
+  "testData": {
+    "localStorage": {
+      "simple": {
+        "user-name": "Test User",
+        "theme": "dark",
+        "language": "en-US"
+      },
+      "json": {
+        "user-profile": "{\"id\":12345,\"name\":\"John Doe\",\"email\":\"john@example.com\"}",
+        "app-settings": "{\"theme\":\"dark\",\"notifications\":true,\"version\":\"1.0.0\"}"
+      },
+      "large": {
+        "description": "Generate 100 items programmatically"
+      }
+    },
+    "sessionStorage": {
+      "simple": {
+        "session-id": "abc123",
+        "temp-data": "temporary value",
+        "current-page": "/dashboard"
+      },
+      "json": {
+        "form-state": "{\"field1\":\"value1\",\"field2\":\"value2\",\"modified\":true}",
+        "navigation-state": "{\"currentRoute\":\"/app\",\"previousRoute\":\"/home\"}"
+      }
+    },
+    "cookies": {
+      "basic": {
+        "session": "session-value-123",
+        "preferences": "theme=dark;lang=en",
+        "user-id": "user-12345"
+      },
+      "advanced": [
+        {
+          "name": "secure-cookie",
+          "value": "secure-value",
+          "domain": ".example.com",
+          "path": "/",
+          "secure": true,
+          "httpOnly": true,
+          "sameSite": "Strict"
+        },
+        {
+          "name": "tracking-cookie",
+          "value": "tracking-123",
+          "domain": "example.com",
+          "path": "/",
+          "secure": false,
+          "httpOnly": false,
+          "sameSite": "Lax"
+        }
+      ]
+    }
+  },
+  "performanceThresholds": {
+    "loadTime": {
+      "extension": 3000,
+      "tabSwitch": 500,
+      "search": 1000,
+      "crud": 2000
+    },
+    "dataLimits": {
+      "maxStorageItems": 1000,
+      "maxCookies": 100,
+      "maxSearchResults": 500
+    }
+  }
+}

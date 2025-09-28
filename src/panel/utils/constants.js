@@ -4,8 +4,7 @@
 export const TABS = {
   DASHBOARD: 'dashboard',
   STORAGE: 'storage',
-  COOKIES: 'cookies',
-  CONSOLE: 'console'
+  COOKIES: 'cookies'
 }
 
 // Storage types
@@ -33,14 +32,8 @@ export const ORGANIZATION_MODES = {
   DEFAULT: 'default',
   TYPE: 'type',
   DOMAIN: 'domain',
-  ALPHABETICAL: 'alphabetical'
-}
-
-// Script execution timing options
-export const EXECUTION_TIMING = {
-  IMMEDIATE: 'immediate',
-  ON_LOAD: 'onload',
-  PERSISTENT: 'persistent'
+  ALPHABETICAL: 'alphabetical',
+  CUSTOM: 'custom'
 }
 
 // Output formats for data export

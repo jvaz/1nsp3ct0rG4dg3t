@@ -9,6 +9,11 @@
     "dev": "webpack --mode development --watch",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:all": "npm run test && npm run test:e2e",
     "lint": "eslint src/**/*.js",
     "lint:fix": "eslint src/**/*.js --fix",
     "clean": "rm -rf dist"
@@ -22,7 +27,6 @@
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.8.1",
     "style-loader": "^3.3.3",
-    "html-webpack-plugin": "^5.5.3",
     "babel-loader": "^9.1.2",
     "@babel/core": "^7.22.0",
     "@babel/preset-env": "^7.22.0",
@@ -32,10 +36,9 @@
     "eslint-plugin-promise": "^6.1.1",
     "jest": "^29.6.1",
     "jest-environment-jsdom": "^29.6.1",
-    "@types/chrome": "^0.0.241"
-  },
-  "dependencies": {
-    "codemirror": "^6.0.1",
-    "lit": "^2.8.0"
+    "@types/chrome": "^0.0.241",
+    "@playwright/test": "^1.40.0",
+    "playwright": "^1.40.0",
+    "@faker-js/faker": "^8.3.1"
   }
 }
