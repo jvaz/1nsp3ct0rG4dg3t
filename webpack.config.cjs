@@ -1,5 +1,6 @@
 const path = require('path')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
+const TerserPlugin = require('terser-webpack-plugin')
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production'
@@ -70,12 +71,11 @@ module.exports = (env, argv) => {
       splitChunks: false, // Chrome extensions don't support code splitting
       minimize: isProduction,
       minimizer: isProduction ? [
-        '...',
-        new (require('terser-webpack-plugin'))({
+        new TerserPlugin({
           terserOptions: {
             compress: {
-              drop_console: true, // Remove console.log statements in production
-              drop_debugger: true, // Remove debugger statements in production
+              drop_console: true,
+              drop_debugger: true,
             },
             mangle: true,
           },
