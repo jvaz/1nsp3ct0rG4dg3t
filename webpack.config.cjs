@@ -1,9 +1,12 @@
 const path = require('path')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 
-module.exports = {
-  mode: 'development',
-  devtool: 'cheap-module-source-map',
+module.exports = (env, argv) => {
+  const isProduction = argv.mode === 'production'
+
+  return {
+    mode: isProduction ? 'production' : 'development',
+    devtool: isProduction ? false : 'cheap-module-source-map',
   entry: {
     background: './src/background.js',
     'content-script': './src/content-script.js',
@@ -63,7 +66,22 @@ module.exports = {
       '@': path.resolve(__dirname, 'src')
     }
   },
-  optimization: {
-    splitChunks: false // Chrome extensions don't support code splitting
+    optimization: {
+      splitChunks: false, // Chrome extensions don't support code splitting
+      minimize: isProduction,
+      minimizer: isProduction ? [
+        '...',
+        new (require('terser-webpack-plugin'))({
+          terserOptions: {
+            compress: {
+              drop_console: true, // Remove console.log statements in production
+              drop_debugger: true, // Remove debugger statements in production
+            },
+            mangle: true,
+          },
+          extractComments: false,
+        }),
+      ] : [],
+    }
   }
 }
