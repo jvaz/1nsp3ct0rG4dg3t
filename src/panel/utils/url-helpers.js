@@ -78,13 +78,91 @@ export function safeCreateUrl(url) {
   }
 }
 
+// Security: Allowed protocols for the extension
+const ALLOWED_PROTOCOLS = new Set([
+  'http:',
+  'https:',
+  'file:'
+])
+
+// Security: Restricted protocols that should never be processed
+const RESTRICTED_PROTOCOLS = new Set([
+  'javascript:',
+  'data:',
+  'vbscript:',
+  'about:',
+  'chrome:',
+  'chrome-extension:',
+  'moz-extension:',
+  'edge-extension:'
+])
+
 /**
- * Validates if a string is a valid URL
+ * Validates if a string is a valid URL with security checks
  * @param {string} url - The URL to validate
- * @returns {boolean} True if valid URL, false otherwise
+ * @param {boolean} strictMode - Whether to apply strict protocol filtering (default: true)
+ * @returns {boolean} True if valid and safe URL, false otherwise
  */
-export function isValidUrl(url) {
-  return safeCreateUrl(url) !== null
+export function isValidUrl(url, strictMode = true) {
+  const urlObj = safeCreateUrl(url)
+  if (!urlObj) {
+    return false
+  }
+
+  // Security check: block dangerous protocols
+  if (RESTRICTED_PROTOCOLS.has(urlObj.protocol)) {
+    console.warn('Blocked dangerous protocol:', urlObj.protocol)
+    return false
+  }
+
+  // In strict mode, only allow specific protocols
+  if (strictMode && !ALLOWED_PROTOCOLS.has(urlObj.protocol)) {
+    console.warn('Protocol not allowed in strict mode:', urlObj.protocol)
+    return false
+  }
+
+  return true
+}
+
+/**
+ * Validates if a URL is safe for extension operations
+ * @param {string} url - The URL to validate
+ * @returns {boolean} True if safe for extension operations, false otherwise
+ */
+export function isSafeUrl(url) {
+  const urlObj = safeCreateUrl(url)
+  if (!urlObj) {
+    return false
+  }
+
+  // Block dangerous protocols
+  if (RESTRICTED_PROTOCOLS.has(urlObj.protocol)) {
+    return false
+  }
+
+  // Additional security checks
+  try {
+    // Check for suspicious URL patterns
+    const suspiciousPatterns = [
+      /javascript:/i,
+      /data:text\/html/i,
+      /vbscript:/i,
+      /%[0-9a-f]{2}javascript/i  // URL-encoded javascript
+    ]
+
+    const urlString = url.toLowerCase()
+    for (const pattern of suspiciousPatterns) {
+      if (pattern.test(urlString)) {
+        console.warn('Blocked suspicious URL pattern:', url)
+        return false
+      }
+    }
+
+    return true
+  } catch (error) {
+    console.warn('Error validating URL safety:', error)
+    return false
+  }
 }
 
 /**

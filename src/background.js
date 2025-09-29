@@ -9,6 +9,86 @@ self.addEventListener('error', (event) => {
   }
 })
 
+// Security: Whitelist of allowed message actions
+const ALLOWED_ACTIONS = new Set([
+  'contentScriptReady',
+  'forwardToContentScript',
+  'getStorageData',
+  'setStorageData',
+  'getCookies',
+  'setCookie',
+  'deleteCookie',
+  'getTabInfo',
+  'storageChanged'
+])
+
+// Security: Validate incoming messages
+function isValidMessage(request, sender) {
+  // Check if request exists and has required structure
+  if (!request || typeof request !== 'object') {
+    console.warn('Invalid message: not an object', request)
+    return false
+  }
+
+  // Check if action is in whitelist
+  if (!ALLOWED_ACTIONS.has(request.action)) {
+    console.warn('Invalid message: unknown action', request.action)
+    return false
+  }
+
+  // Check sender is from extension context (allow both extension context and null sender for internal calls)
+  if (sender && sender.id && sender.id !== chrome.runtime.id) {
+    console.warn('Invalid message: sender not from extension', sender)
+    return false
+  }
+
+  // Additional validation for specific actions
+  switch (request.action) {
+    case 'forwardToContentScript':
+      if (!request.payload || typeof request.payload !== 'object') {
+        console.warn('Invalid forwardToContentScript: missing payload')
+        return false
+      }
+      if (!request.tabId || typeof request.tabId !== 'number') {
+        console.warn('Invalid forwardToContentScript: missing tabId')
+        return false
+      }
+      break
+    case 'setStorageData':
+      if (!request.storageType || !['localStorage', 'sessionStorage'].includes(request.storageType)) {
+        console.warn('Invalid setStorageData: invalid storageType')
+        return false
+      }
+      break
+    case 'setCookie':
+      if (!request.cookieData || typeof request.cookieData !== 'object') {
+        console.warn('Invalid setCookie: missing cookieData object')
+        return false
+      }
+      if (!request.tabId || typeof request.tabId !== 'number') {
+        console.warn('Invalid setCookie: missing tabId')
+        return false
+      }
+      break
+    case 'deleteCookie':
+      if (!request.cookieData || typeof request.cookieData !== 'object') {
+        console.warn('Invalid deleteCookie: missing cookieData object')
+        return false
+      }
+      if (!request.cookieData.name || typeof request.cookieData.name !== 'string') {
+        console.warn('Invalid deleteCookie: missing cookieData.name')
+        return false
+      }
+      if (!request.tabId || typeof request.tabId !== 'number') {
+        console.warn('Invalid deleteCookie: missing tabId')
+        return false
+      }
+      break
+  }
+
+  return true
+}
+
 // URL Helper Functions
 function getOriginFromUrl(url, fallback = '') {
   if (!url || typeof url !== 'string') {
@@ -59,6 +139,12 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 // Handle messages from content scripts and panel
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // Validate incoming message for security
+  if (!isValidMessage(request, sender)) {
+    sendResponse({ success: false, error: 'Invalid message format or action' })
+    return true
+  }
+
   switch (request.action) {
     case 'contentScriptReady':
       handleContentScriptReady(request, sender)
@@ -84,6 +170,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       break
     case 'getTabInfo':
       handleGetTabInfo (request, sender, sendResponse)
+      break
+    case 'storageChanged':
+      // Handle storage change notifications (no response needed)
+      sendResponse({ success: true })
       break
     default:
       console.warn('Unknown action:', request.action)

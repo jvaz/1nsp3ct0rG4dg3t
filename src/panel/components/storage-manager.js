@@ -1,7 +1,7 @@
 // Storage Manager Component for 1nsp3ct0rG4dg3t Extension
 
 import { showToast, escapeHtml } from '../utils/ui-helpers.js'
-import { isValidStorageKey } from '../utils/validation.js'
+import { isValidStorageKey, validateStorageValue } from '../utils/validation.js'
 import { STORAGE_TYPES, TOAST_TYPES } from '../utils/constants.js'
 
 export class StorageManager {
@@ -220,6 +220,10 @@ export class StorageManager {
         return value
       }
     }
+    // Handle objects by converting them to formatted JSON
+    if (typeof value === 'object' && value !== null) {
+      return JSON.stringify(value, null, 2)
+    }
     return String(value)
   }
 
@@ -242,6 +246,7 @@ export class StorageManager {
         placeholder: 'Enter value... (plain text or JSON)',
         rows: 4,
         help: 'The value to store. Plain text or JSON objects (JSON will be automatically parsed).',
+        validate: (value) => validateStorageValue(value, false),
         validateJSON: true
       },
       {
@@ -321,6 +326,7 @@ export class StorageManager {
         value: displayValue,
         required: true,
         rows: 6,
+        validate: (value) => validateStorageValue(value, false),
         validateJSON: true
       },
       {

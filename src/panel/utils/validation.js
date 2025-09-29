@@ -52,10 +52,17 @@ export function isValidCookieName(name) {
   if (!name || !name.trim()) {
     return 'Cookie name is required'
   }
-  // Cookie name validation - no spaces, semicolons, etc.
-  if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-    return 'Cookie name can only contain letters, numbers, underscores, and hyphens'
+
+  // RFC 6265 size limits - cookie name should be reasonable
+  if (name.length > 255) {
+    return 'Cookie name must be less than 255 characters'
   }
+
+  // Cookie name validation - no control characters, spaces, or special chars per RFC 6265
+  if (!/^[!#$%&'*+\-.0-9A-Z^_`a-z|~]+$/.test(name)) {
+    return 'Cookie name contains invalid characters (no spaces, control chars, or ()/<>@,;:\\"[]?={} allowed)'
+  }
+
   return true
 }
 
@@ -90,6 +97,30 @@ export function isValidCookiePath(path) {
 }
 
 /**
+ * Validate cookie value according to RFC 6265 standards
+ * @param {string} value - The cookie value to validate
+ * @returns {string|boolean} True if valid, error message if invalid
+ */
+export function isValidCookieValue(value) {
+  if (value === null || value === undefined) {
+    return 'Cookie value is required'
+  }
+
+  // RFC 6265 size limit - 4KB is common browser limit
+  if (value.length > 4096) {
+    return 'Cookie value must be less than 4KB (4096 characters)'
+  }
+
+  // Cookie value validation - no control characters per RFC 6265
+  // Allow printable ASCII except double quotes, comma, semicolon, and backslash
+  if (!/^[!#-+\--:<-[\]-~]*$/.test(value)) {
+    return 'Cookie value contains invalid characters (no control chars, quotes, commas, semicolons, or backslashes allowed)'
+  }
+
+  return true
+}
+
+/**
  * Validate storage value - can be plain text or JSON
  * @param {string} value - The value to validate
  * @param {boolean} requireJSON - Whether to require valid JSON
@@ -98,6 +129,11 @@ export function isValidCookiePath(path) {
 export function validateStorageValue(value, requireJSON = false) {
   if (!value && value !== '') {
     return 'Value is required'
+  }
+
+  // Add reasonable size limit for storage values (5MB is typical localStorage limit)
+  if (value.length > 5242880) {
+    return 'Storage value must be less than 5MB'
   }
 
   if (requireJSON) {

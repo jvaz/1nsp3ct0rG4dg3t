@@ -112,7 +112,9 @@ async function setStorageData (storageType, key, value) {
       return { success: false, error: `${storageType} not available` }
     }
 
-    storage.setItem(key, value)
+    // Properly stringify objects for storage
+    const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value)
+    storage.setItem(key, stringValue)
     return { success: true }
   } catch (error) {
     return { success: false, error: error.message }

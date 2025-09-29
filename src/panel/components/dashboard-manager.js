@@ -1001,24 +1001,48 @@ export class DashboardManager {
       const typeMatch = item.type === type
       const keyMatch = item.key === key
 
-      // Direct domain normalization for comparison
+      // Enhanced domain normalization for comparison
       let searchDomain = domain.toLowerCase().trim()
       let storedDomain = item.domain.toLowerCase().trim()
 
       console.log(`🔄 Before normalization: search="${searchDomain}", stored="${storedDomain}"`)
 
       // Remove leading dots for comparison
-      if (searchDomain.startsWith('.')) {
+      const searchHadDot = searchDomain.startsWith('.')
+      const storedHadDot = storedDomain.startsWith('.')
+
+      if (searchHadDot) {
         searchDomain = searchDomain.substring(1)
         console.log(`🔄 Removed leading dot from search: "${searchDomain}"`)
       }
-      if (storedDomain.startsWith('.')) {
+      if (storedHadDot) {
         storedDomain = storedDomain.substring(1)
         console.log(`🔄 Removed leading dot from stored: "${storedDomain}"`)
       }
 
-      const domainMatch = searchDomain === storedDomain
-      console.log(`🔄 Domain comparison: "${searchDomain}" === "${storedDomain}" = ${domainMatch}`)
+      // Cookie domain matching logic:
+      // 1. Exact match
+      // 2. If search domain had leading dot, it's a parent domain - check if stored is subdomain
+      // 3. If stored domain had leading dot, it's a parent domain - check if search is subdomain
+      let domainMatch = searchDomain === storedDomain
+
+      if (!domainMatch && searchHadDot && !storedHadDot) {
+        // Search is parent domain (.example.com), stored is specific (sub.example.com)
+        domainMatch = storedDomain.endsWith('.' + searchDomain) || storedDomain === searchDomain
+        if (domainMatch) {
+          console.log(`🔄 Parent domain match: "${searchDomain}" matches subdomain "${storedDomain}"`)
+        }
+      }
+
+      if (!domainMatch && storedHadDot && !searchHadDot) {
+        // Stored is parent domain (.example.com), search is specific (sub.example.com)
+        domainMatch = searchDomain.endsWith('.' + storedDomain) || searchDomain === storedDomain
+        if (domainMatch) {
+          console.log(`🔄 Parent domain match: "${storedDomain}" matches subdomain "${searchDomain}"`)
+        }
+      }
+
+      console.log(`🔄 Domain comparison result: "${searchDomain}" vs "${storedDomain}" = ${domainMatch}`)
 
       return typeMatch && keyMatch && domainMatch
     })
@@ -1186,10 +1210,18 @@ export class DashboardManager {
       await this.pinProperty(type, key)
       // Ensure we have the latest pinned properties data before refreshing search
       await this.loadPinnedProperties()
-      // Now refresh search results with updated pin status
+
+      // Small delay to ensure storage write is complete
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Force refresh search results with updated pin status
       const searchInput = document.getElementById('dashboardSearch')
-      if (searchInput.value) {
+      if (searchInput && searchInput.value) {
+        console.log('🔄 Refreshing search results after pin operation')
         await this.searchAllData(searchInput.value)
+
+        // Also update other pin button states
+        this.updatePinButtonStates()
       }
 
       this.pinningInProgress.delete(pinButtonKey)

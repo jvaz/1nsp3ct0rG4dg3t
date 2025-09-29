@@ -539,10 +539,8 @@ class Inspector {
   }
 
   updateStatusBar () {
-    const statusElement = document.getElementById('pageUrl')
-    if (this.tabInfo) {
-      statusElement.textContent = this.tabInfo.url || 'Unknown URL'
-    }
+    // Status bar updates if needed in the future
+    // pageUrl element removed to simplify footer
   }
 
 

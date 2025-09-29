@@ -3,6 +3,7 @@
 import { showToast, escapeHtml } from '../utils/ui-helpers.js'
 import { TOAST_TYPES } from '../utils/constants.js'
 import { getDomainFromTab } from '../utils/url-helpers.js'
+import { isValidCookieName, isValidCookieValue } from '../utils/validation.js'
 
 export class CookieManager {
   constructor(messageHandler, modalManager, inspector) {
@@ -215,16 +216,11 @@ export class CookieManager {
   }
 
   validateCookieName(value) {
-    if (!value || !value.trim()) return 'Cookie name is required'
-    if (value.length > 100) return 'Cookie name must be less than 100 characters'
-    if (/[;,\s]/.test(value)) return 'Cookie name cannot contain semicolons, commas, or spaces'
-    return true
+    return isValidCookieName(value)
   }
 
   validateCookieValue(value) {
-    if (!value && value !== '') return 'Cookie value is required'
-    if (value.length > 4096) return 'Cookie value must be less than 4096 characters'
-    return true
+    return isValidCookieValue(value)
   }
 
   async ensureTabInfo() {
