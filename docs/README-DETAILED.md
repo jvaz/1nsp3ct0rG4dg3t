@@ -1,179 +1,144 @@
-# 1nsp3ct0rG4dg3t - Chrome Extension
+# 1nsp3ct0rG4dg3t - Project Overview
 
-## Project Overview
-**1nsp3ct0rG4dg3t** is a Chrome browser extension that provides developers with advanced debugging and manipulation capabilities for web pages, focusing on storage management, application inspection, and JavaScript injection. The name pays homage to the classic Inspector Gadget while embracing l33t speak culture that resonates with developers.
+## Current Status: Production Ready ✅
 
-## 🎉 Current Implementation Status
+**1nsp3ct0rG4dg3t** is a Chrome browser extension that provides developers with advanced debugging capabilities for web pages. The extension focuses on storage management (localStorage, sessionStorage, cookies) and application inspection.
 
-**✅ FULLY FUNCTIONAL EXTENSION** - All core features are implemented and production-ready!
+**Current Version**: 1.0.0 - Production Ready for Chrome Web Store
 
-### ✅ Implemented Features
-- **Dashboard**: Pin localStorage, sessionStorage, and cookie values with drag-and-drop organization
-- **Storage Management**: Complete CRUD operations for localStorage and sessionStorage with smart validation
-- **Cookie Management**: Full cookie manipulation with security analysis and all attributes support
-- **JavaScript Console**: Execute custom scripts with multiple timing modes and error handling
-- **Modern UI**: Responsive design with dark/light themes and tabbed interface
-- **Smart Loading**: Handles all URL types with graceful error handling and content script validation
+## What's Implemented Right Now
 
-### 🚀 Quick Start
-1. `npm install` - Install dependencies
-2. `npm run build` - Build the extension
-3. Load `dist/` folder in Chrome Developer Mode
-4. Start debugging with advanced storage and cookie management!
+### ✅ Core Features (All Working)
 
-### 📋 Ready for Chrome Web Store
-The extension is production-ready with comprehensive error handling, security compliance, and user-friendly interface.
+**🎯 4-Tab Interface**:
+- **Dashboard**: Pin and organize important storage values with search and organization modes
+- **Storage**: Complete localStorage/sessionStorage management with CRUD operations
+- **Cookies**: Full cookie management with security analysis and all attributes
+- **Application**: Comprehensive page inspection with performance and security metrics
+
+**🎯 Key Capabilities**:
+- **Universal Search**: Search across all storage types from any tab
+- **Real-time Updates**: Automatic refresh when storage data changes
+- **JSON Support**: Pretty-print viewing with search and copy functionality
+- **Security Analysis**: Cookie security warnings and best practices
+- **Framework Detection**: Automatic detection of React, Vue, Angular, jQuery, etc.
+- **Dark/Light Themes**: System theme detection with manual toggle
+- **Cross-tab Sync**: Changes reflect across multiple extension instances
+
+### ✅ Technical Implementation
+
+**Modern Chrome Integration**:
+- **Manifest V3**: Uses latest Chrome extension standards
+- **Side Panel API**: Native Chrome side panel integration (Chrome 114+)
+- **Service Worker**: Efficient background script with proper lifecycle management
+- **Content Scripts**: Smart injection with URL validation and error handling
+
+**Performance & Security**:
+- **CSP Compliant**: Full Content Security Policy compliance
+- **Minimal Permissions**: Only requests necessary permissions
+- **Local Data Only**: No external servers, all data stays on your machine
+- **Optimized Loading**: Lazy loading and debounced operations
+
+## Quick Start (Ready to Use)
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Build the extension
+npm run build
+
+# 3. Load in Chrome
+# Go to chrome://extensions/
+# Enable "Developer mode"
+# Click "Load unpacked" → Select dist/ folder
+```
+
+**That's it!** The extension is immediately functional with all features working.
+
+## What You Can Do Right Now
+
+### Immediate Use Cases
+
+1. **Debug Storage Issues**:
+   - View all localStorage/sessionStorage data
+   - Edit values in real-time
+   - Pin important values to dashboard
+
+2. **Cookie Management**:
+   - See all cookies for current domain
+   - Create, edit, delete cookies
+   - Get security warnings for insecure configurations
+
+3. **Application Analysis**:
+   - See page performance metrics
+   - Detect frameworks and libraries
+   - Analyze security configuration
+
+4. **Developer Workflow**:
+   - Search across all storage types
+   - Copy JSON data easily
+   - Organize by domain or type
+
+### Ready for Production
+
+The extension is **Chrome Web Store ready** with:
+- ✅ No console errors
+- ✅ Full error handling
+- ✅ User-friendly interface
+- ✅ Comprehensive feature set
+- ✅ Security compliance
+- ✅ Performance optimization
+
+## Documentation Structure
+
+For detailed information, see our comprehensive documentation:
+
+- **[📖 Features](./FEATURES.md)**: Complete feature descriptions and capabilities
+- **[🏗️ Architecture](./ARCHITECTURE.md)**: Technical architecture and implementation details
+- **[🛠️ Development](./DEVELOPMENT.md)**: Setup, development workflow, and contribution guidelines
+- **[📥 Installation](./INSTALLATION.md)**: Detailed installation and usage instructions
+- **[🔧 Troubleshooting](./TROUBLESHOOTING.md)**: Common issues and solutions
+- **[📋 Changelog](./CHANGELOG.md)**: Version history and development progress
+
+## Future Considerations
+
+While the extension is complete and production-ready, potential future enhancements could include:
+
+- **Network Request Monitoring**: Track HTTP requests and responses
+- **Advanced Performance Profiling**: Detailed performance analysis beyond current metrics
+- **Export/Import Enhancements**: Multiple formats and bulk operations
+- **Team Collaboration**: Shared dashboard configurations
+- **Dashboard Templates**: Predefined layouts for common use cases
+
+**Note**: These are considerations for future versions. The current extension is fully functional and ready for immediate use.
+
+## What's NOT Included
+
+For clarity, the following were considered but are **not implemented**:
+
+- **❌ JavaScript Console**: Removed due to Chrome CSP restrictions
+- **❌ Network Monitoring**: Not included in current version
+- **❌ Team Features**: Single-user extension only
+- **❌ Cloud Sync**: All data stays local
+- **❌ External Integrations**: Standalone tool
+
+## Browser Compatibility
+
+- **✅ Chrome 88+**: Minimum supported version
+- **✅ Chrome 114+**: Optimal experience with Side Panel API
+- **✅ Chromium-based browsers**: Edge and similar browsers
+- **❌ Firefox**: Not currently supported (Manifest V3 differences)
+
+## Credits & Links
+
+**Created by**: João Vaz
+**GitHub**: [https://github.com/jvaz/1nsp3ct0rG4dg3t](https://github.com/jvaz/1nsp3ct0rG4dg3t)
+**Personal Website**: [https://jvaz.github.io/](https://jvaz.github.io/)
+**Support**: [Buy me a coffee](https://www.buymeacoffee.com/jvaz)
+
+**License**: MIT License - Open source and free to use
 
 ---
 
-## Original Requirements & Future Vision
-
-The following sections document the original requirements and future enhancement ideas:
-
-## Core Features
-
-### 1. Dashboard (Personalized View)
-- **Pinned Properties**: User-selected localStorage, sessionStorage, and cookie values displayed in one view
-- **Custom Layouts**: Drag-and-drop interface to arrange pinned items
-- **Quick Actions**: Inline editing of pinned properties without switching tabs  
-- **Property Grouping**: Create custom groups/sections (e.g., "Auth Tokens", "User Preferences", "Debug Flags")
-- **Dashboard Templates**: Save and load different dashboard configurations for different projects
-- **Real-time Updates**: Automatic refresh of pinned values when they change
-- **Export Dashboard**: Share dashboard configurations with team members
-- **Conditional Highlighting**: Color-code properties based on values or conditions
-- **Dashboard Config Mode**: Toggle between view and configuration modes
-- **Property Aliases**: Give custom names to technical property keys for better readability
-
-### 2. Local Storage Management
-- **View Local Storage**: Display all key-value pairs stored in the current tab's localStorage
-- **Edit Existing Entries**: Allow inline editing of existing localStorage values
-- **Add New Entries**: Provide interface to create new localStorage key-value pairs
-- **Delete Entries**: Enable removal of individual or multiple localStorage items
-- **Export/Import**: Option to export localStorage data to JSON and import from file
-- **Search & Filter**: Search functionality to quickly find specific keys or values
-- **Type Detection**: Automatically detect and display data types (string, number, boolean, object)
-
-### 3. Session Storage Management
-- **View Session Storage**: Display all key-value pairs stored in the current tab's sessionStorage
-- **Edit Existing Entries**: Allow inline editing of existing sessionStorage values
-- **Add New Entries**: Provide interface to create new sessionStorage key-value pairs
-- **Delete Entries**: Enable removal of individual or multiple sessionStorage items
-- **Export/Import**: Option to export sessionStorage data to JSON and import from file
-- **Search & Filter**: Search functionality to quickly find specific keys or values
-- **Type Detection**: Automatically detect and display data types (string, number, boolean, object)
-
-### 4. Cookie Management
-- **View All Cookies**: Display all cookies associated with the current domain and subdomain
-- **Cookie Details**: Show complete cookie properties (name, value, domain, path, expires, secure, httpOnly, sameSite)
-- **Edit Cookie Values**: Allow inline editing of existing cookie values
-- **Create New Cookies**: Interface to add new cookies with all properties
-- **Delete Cookies**: Remove individual or multiple cookies
-- **Cookie Search & Filter**: Search by name, value, domain, or other properties
-- **Cookie Import/Export**: Export cookies to JSON/CSV format and import from files
-- **Cookie Security Analysis**: Highlight security concerns (missing Secure flag, overly broad domains, etc.)
-- **Cookie Expiration Tracking**: Visual indicators for expired, session, and long-lived cookies
-- **Cross-Domain Cookies**: Show cookies from different domains accessible to the current page
-
-### 5. Application Information Access
-- **Page Metadata**: Display page title, URL, domain, protocol
-- **Performance Metrics**: Show page load times, resource counts, memory usage
-- **Browser Information**: Display browser version, user agent, viewport dimensions
-- **Security Information**: Show HTTPS status, certificate details, CSP headers
-- **Framework Detection**: Identify popular frameworks/libraries in use (React, Vue, Angular, jQuery, etc.)
-- **API Endpoints**: Detect and list API calls made by the page
-- **Console Logs**: Access and display recent console messages
-
-### 6. JavaScript Injection
-- **Code Editor**: Built-in syntax-highlighted JavaScript editor with auto-completion
-- **Execute Scripts**: Run custom JavaScript code in the context of the current page
-- **Script Library**: Save and organize frequently used scripts
-- **Script Templates**: Pre-built templates for common debugging tasks
-- **Live Console**: Interactive JavaScript console for real-time code execution
-- **Error Handling**: Proper error reporting and debugging information
-- **DOM Manipulation**: Easy access to DOM elements and manipulation methods
-- **Event Listeners**: Ability to add/remove event listeners dynamically
-
-## Technical Requirements
-
-### Extension Architecture
-- **Manifest Version**: Use Manifest V3 for Chrome extension
-- **Permissions**: 
-  - `activeTab` - Access current tab
-  - `storage` - Extension's own storage
-  - `scripting` - Inject scripts
-  - `cookies` - Access cookies
-  - `host_permissions` - Access to all websites
-- **Content Scripts**: Inject scripts to interact with page storage and DOM
-- **Background Service Worker**: Handle extension lifecycle and messaging
-- **Popup Interface**: Main UI accessible from extension icon
-
-### User Interface
-- **Responsive Design**: Work across different screen sizes
-- **Tabbed Interface**: Main tabs for Dashboard, Storage (localStorage/sessionStorage), Cookies, and JS Console
-- **Dark/Light Theme**: Support both theme modes
-- **Keyboard Shortcuts**: Common shortcuts for power users
-- **Context Menus**: Right-click options for common actions
-
-### Data Handling
-- **Real-time Updates**: Automatically refresh data when storage changes
-- **Data Validation**: Validate JSON and other data formats before saving
-- **Backup/Restore**: Create backups before making changes
-- **Undo/Redo**: Support for undoing recent changes
-- **Data Encryption**: Option to encrypt sensitive stored data
-
-### Performance
-- **Minimal Resource Usage**: Optimize for low memory and CPU usage
-- **Lazy Loading**: Load data only when needed
-- **Caching**: Cache frequently accessed data
-- **Debounced Updates**: Prevent excessive API calls during rapid changes
-
-## Security Considerations
-- **Content Security Policy**: Comply with CSP requirements
-- **Cross-Origin Safety**: Handle cross-origin restrictions properly
-- **Input Sanitization**: Sanitize all user inputs to prevent XSS
-- **Permission Model**: Request minimal necessary permissions
-- **Data Privacy**: Don't transmit user data to external servers
-
-## User Experience Features
-- **Onboarding**: Brief tutorial for first-time users
-- **Help Documentation**: Built-in help and tooltips
-- **Export Formats**: Support multiple export formats (JSON, CSV, etc.)
-- **Keyboard Navigation**: Full keyboard accessibility
-- **Error Messages**: Clear, actionable error messages
-- **Loading States**: Visual feedback during operations
-
-## Browser Compatibility
-- **Primary Target**: Chrome/Chromium browsers
-- **Version Support**: Support last 3 major Chrome versions
-- **Future Compatibility**: Consider Edge and other Chromium-based browsers
-
-## Development Requirements
-- **Code Quality**: Follow ES6+ standards with proper linting
-- **Testing**: Unit tests for core functionality
-- **Documentation**: Comprehensive code documentation
-- **Version Control**: Git-based development workflow
-- **Build Process**: Automated build and packaging system
-
-## Deployment
-- **Chrome Web Store**: Publish **1nsp3ct0rG4dg3t** to official store
-- **Auto-Updates**: Support automatic extension updates
-- **Privacy Policy**: Comply with store requirements
-- **Manifest Validation**: Ensure all permissions are justified
-
-## Success Metrics
-- **User Adoption**: Target active user base growth
-- **Performance**: Page load impact < 5ms
-- **Reliability**: 99.9% crash-free sessions
-- **User Satisfaction**: 4+ star rating in Chrome Web Store
-
-## Future Enhancements (Phase 2)
-- **Network Monitoring**: Track and display network requests
-- **Performance Profiling**: Built-in performance analysis tools
-- **Screenshot/Recording**: Capture page states
-- **Team Collaboration**: Share configurations with team members
-- **API Integration**: Connect with popular development tools
-- **Cookie Analytics**: Track cookie usage patterns and optimization suggestions
-- **GDPR Compliance Tools**: Help identify and manage privacy-related cookies
-- **Dashboard Themes**: Multiple visual themes for the custom dashboard
-- **Property History**: Track changes to pinned properties over time
-- **Smart Suggestions**: AI-powered suggestions for useful properties to pin based on usage patterns
+**🎉 Ready for Use**: The extension is production-ready and can be loaded immediately for debugging and development work. All core features are implemented and working reliably.
